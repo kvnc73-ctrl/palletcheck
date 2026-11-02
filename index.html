@@ -2504,16 +2504,15 @@ function admSaveDirect(){
 }
 
 // ── GITHUB PUSH ──
-var GH_OWNER='kvnc73-ctrl';
-var GH_REPO='palletcheck';
-var GH_FILE='data.json';
-var GH_BRANCH='main';
-
 function admSaveToken(){
   try{localStorage.setItem('pc_gh_token',document.getElementById('admGhToken').value);}catch(e){}
 }
 
 function admPushGitHub(){
+  var GH_OWNER='kvnc73-ctrl';
+  var GH_REPO='palletcheck';
+  var GH_FILE='data.json';
+  var GH_BRANCH='main';
   var token=document.getElementById('admGhToken').value.trim();
   if(!token){alert('Ingresa tu GitHub Token primero.');return;}
   if(!admJsonBlob||!admJsonBlob._jsonStr){alert('Procesa los archivos primero.');return;}
