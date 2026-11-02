@@ -2404,20 +2404,30 @@ function admParseDockActivity(rows){
     var row=rows[r2];
     var loadId=String(row[iLoad]||'').trim().replace(/\.0$/,'');
     if(!loadId||loadId===''||isNaN(Number(loadId)))continue;
-    var ref=String(row[iRef]||'').trim();
-    var sos=ref?ref.split(',').map(function(s){return s.trim();}).filter(Boolean):[];
-    dock[loadId]={
-      loadId:loadId,
-      confirm:String(row[iConfirm]||'').trim().replace(/\.0$/,''),
-      carrier:String(row[iCarrier]||'').trim(),
-      sos:sos,
-      pallets:Math.round(parseFloat(row[iPal])||0),
-      dest:String(row[iDest]||'').trim(),
-      destCity:String(row[iDestCity]||'').trim(),
-      destState:String(row[iDestState]||'').trim(),
-      door:String(row[iDoor]||'').trim(),
-      comments:String(row[iComments]||'').replace(/\n/g,' ').trim()
-    };
+    // Collect SO from Shipment Reference (strip leading S if present)
+    var ref=String(row[iRef]||'').trim().replace(/^S/i,'');
+    if(!dock[loadId]){
+      // First row for this load — create entry
+      dock[loadId]={
+        loadId:loadId,
+        confirm:String(row[iConfirm]||'').trim().replace(/\.0$/,''),
+        carrier:String(row[iCarrier]||'').trim(),
+        sos:ref?[ref]:[],
+        pallets:0,
+        dest:String(row[iDest]||'').trim(),
+        destCity:String(row[iDestCity]||'').trim(),
+        destState:String(row[iDestState]||'').trim(),
+        door:String(row[iDoor]||'').trim(),
+        comments:String(row[iComments]||'').replace(/\n/g,' ').trim()
+      };
+    } else {
+      // Subsequent row for same load — just add new SO if not already there
+      if(ref&&dock[loadId].sos.indexOf(ref)<0){
+        dock[loadId].sos.push(ref);
+      }
+    }
+    // Accumulate pallets across all rows
+    dock[loadId].pallets+=Math.round(parseFloat(row[iPal])||0);
   }
   return dock;
 }
