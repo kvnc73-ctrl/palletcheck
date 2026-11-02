@@ -349,12 +349,70 @@ nav{
 
 /* KPI bar */
 .kpi-bar{
-  display:grid;grid-template-columns:repeat(4,1fr);
+  display:grid;grid-template-columns:repeat(4,1fr) auto;
   border-bottom:1px solid rgba(255,255,255,.08);flex-shrink:0;
   background:var(--navy2);
 }
 .kpi{padding:14px 20px;border-right:1px solid rgba(255,255,255,.06);}
 .kpi:last-child{border-right:none;}
+.kpi-actions{
+  display:flex;flex-direction:column;justify-content:center;gap:6px;
+  padding:10px 14px;border-left:1px solid rgba(255,255,255,.06);
+  background:rgba(0,0,0,.15);min-width:130px;
+}
+.kpi-btn{
+  display:block;width:100%;padding:5px 10px;border:none;border-radius:5px;
+  font-size:11px;font-weight:700;letter-spacing:.04em;cursor:pointer;
+  text-align:center;transition:opacity .15s;
+}
+.kpi-btn:active{opacity:.75;}
+.kpi-btn.btn-addid{background:rgba(99,102,241,.25);color:#a5b4fc;border:1px solid rgba(99,102,241,.4);}
+.kpi-btn.btn-confirm{background:rgba(16,185,129,.2);color:#6ee7b7;border:1px solid rgba(16,185,129,.35);}
+.kpi-btn.btn-back{background:rgba(255,255,255,.07);color:rgba(255,255,255,.5);border:1px solid rgba(255,255,255,.12);}
+.kpi-btn.btn-cancel{background:rgba(239,68,68,.12);color:#fca5a5;border:1px solid rgba(239,68,68,.25);}
+/* Override modals */
+.ov-modal{
+  display:none;position:fixed;inset:0;z-index:900;
+  background:rgba(0,0,0,.65);backdrop-filter:blur(4px);
+  align-items:center;justify-content:center;
+}
+.ov-modal.active{display:flex;}
+.ov-card{
+  background:#1e2535;border:1px solid rgba(255,255,255,.12);border-radius:16px;
+  padding:24px;width:340px;max-width:90vw;
+}
+.ov-title{font-size:14px;font-weight:700;color:#fff;margin-bottom:4px;}
+.ov-sub{font-size:11px;color:rgba(255,255,255,.4);margin-bottom:18px;}
+.ov-input{
+  width:100%;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);
+  border-radius:8px;padding:10px 14px;color:#fff;font-size:15px;
+  font-family:var(--mono);outline:none;box-sizing:border-box;
+}
+.ov-input:focus{border-color:rgba(99,102,241,.6);}
+.ov-mix-btn{
+  margin-top:8px;padding:8px;width:100%;background:rgba(245,158,11,.15);
+  border:1px solid rgba(245,158,11,.3);border-radius:8px;color:#fbbf24;
+  font-size:12px;font-weight:700;cursor:pointer;
+}
+.ov-row{display:flex;gap:8px;margin-top:14px;}
+.ov-ok{
+  flex:1;padding:10px;background:rgba(99,102,241,.3);color:#c7d2fe;
+  border:1px solid rgba(99,102,241,.5);border-radius:8px;font-weight:700;
+  font-size:12px;cursor:pointer;
+}
+.ov-cancel{
+  padding:10px 16px;background:rgba(255,255,255,.06);color:rgba(255,255,255,.4);
+  border:1px solid rgba(255,255,255,.1);border-radius:8px;font-size:12px;cursor:pointer;
+}
+/* Confirm load mismatch options */
+.ov-mismatch-opt{
+  padding:12px 14px;border-radius:10px;cursor:pointer;margin-bottom:8px;
+  border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);
+  transition:background .15s;
+}
+.ov-mismatch-opt:hover{background:rgba(255,255,255,.09);}
+.ov-mismatch-opt .opt-title{font-size:12px;font-weight:700;color:#fff;margin-bottom:3px;}
+.ov-mismatch-opt .opt-sub{font-size:10px;color:rgba(255,255,255,.4);line-height:1.5;}
 .kpi-lbl{font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:rgba(255,255,255,.3);margin-bottom:4px;}
 .kpi-val{font-family:var(--display);font-size:28px;letter-spacing:1px;color:#fff;line-height:1;}
 .kpi-val.green{color:var(--emerald);}
@@ -889,7 +947,59 @@ tbody td{padding:10px 16px;font-size:12px;color:var(--t1);}
         <div class="kpi-val" id="kMis">0</div>
         <div class="kpi-sub">rejected</div>
       </div>
+      <div class="kpi-actions">
+        <button class="kpi-btn btn-addid" onclick="ovAddIDOpen()">+ Add ID</button>
+        <button class="kpi-btn btn-confirm" onclick="ovConfirmLoad()">Confirm Load</button>
+        <button class="kpi-btn btn-back" onclick="ovBack()">↩ Back</button>
+        <button class="kpi-btn btn-cancel" onclick="ovCancel()">✕ Cancel</button>
+      </div>
     </div>
+
+  <!-- Add ID Modal -->
+  <div class="ov-modal" id="ovAddModal">
+    <div class="ov-card">
+      <div class="ov-title">Add Pallet to Load</div>
+      <div class="ov-sub">Enter the physical pallet data. Select MIX if it contains multiple SKUs.</div>
+
+      <div style="margin-bottom:10px;">
+        <div style="font-size:10px;color:rgba(255,255,255,.4);letter-spacing:.08em;text-transform:uppercase;margin-bottom:5px;">Pallet ID <span style="color:rgba(255,255,255,.25);font-size:9px;">(barcode scanned by picker)</span></div>
+        <input class="ov-input" id="ovAddInput" placeholder="e.g. 23PL478678965" autocomplete="off" autocorrect="off" spellcheck="false">
+      </div>
+
+      <div style="margin-bottom:10px;">
+        <div style="font-size:10px;color:rgba(255,255,255,.4);letter-spacing:.08em;text-transform:uppercase;margin-bottom:5px;">Product Label ID <span style="color:rgba(255,255,255,.25);font-size:9px;">(physical product label ID)</span></div>
+        <input class="ov-input" id="ovAddLabelInput" placeholder="e.g. SKU, item #, or label ID" autocomplete="off" autocorrect="off" spellcheck="false">
+      </div>
+
+      <button class="ov-mix-btn" onclick="ovAddIDSubmit('MIX')">📦 This is a MIX pallet (multiple items)</button>
+      <div class="ov-row">
+        <button class="ov-ok" onclick="ovAddIDConfirm()">Add &amp; Continue</button>
+        <button class="ov-cancel" onclick="ovModalClose('ovAddModal')">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Confirm Load Mismatch Modal -->
+  <div class="ov-modal" id="ovMismatchModal">
+    <div class="ov-card">
+      <div class="ov-title" id="ovMismatchTitle">Count Mismatch</div>
+      <div class="ov-sub" id="ovMismatchSub"></div>
+      <div id="ovMismatchOpts"></div>
+      <div class="ov-row" style="margin-top:8px;">
+        <button class="ov-cancel" style="flex:1;" onclick="ovModalClose('ovMismatchModal')">Cancel — keep scanning</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Confirm Load OK Modal -->
+  <div class="ov-modal" id="ovConfirmOKModal">
+    <div class="ov-card" style="text-align:center;">
+      <div style="font-size:36px;margin-bottom:10px;">✅</div>
+      <div class="ov-title" style="font-size:16px;margin-bottom:6px;">Load Confirmed</div>
+      <div class="ov-sub" id="ovConfirmOKSub" style="margin-bottom:18px;"></div>
+      <button class="ov-ok" style="font-size:13px;" onclick="ovModalClose('ovConfirmOKModal');goView('setup');">OK — Back to Load</button>
+    </div>
+  </div>
 
     <div class="scan-main">
     <div class="scan-area">
@@ -958,8 +1068,8 @@ tbody td{padding:10px 16px;font-size:12px;color:var(--t1);}
     <table id="mTable" style="display:none">
       <thead><tr>
         <th>#</th><th>Date</th><th>Time</th><th>Door</th>
-        <th>Trailer</th><th>Sales&nbsp;Order</th><th>Loader</th>
-        <th>Shift</th><th>Min</th><th>Pallets</th><th>Wrong</th><th>Result</th>
+        <th>Trailer</th><th>Sales&nbsp;Order</th><th>Load</th><th>Loader</th>
+        <th>Shift</th><th>Min</th><th>Pallets</th><th>Wrong</th><th>Result</th><th>Notes</th>
       </tr></thead>
       <tbody id="mTbody"></tbody>
     </table>
@@ -1081,7 +1191,7 @@ tbody td{padding:10px 16px;font-size:12px;color:var(--t1);}
       </button>
     </div>
     <div id="admSaveHint" style="margin-top:8px;font-size:11px;font-family:var(--mono);color:var(--t3);line-height:1.8;">
-      Los drivers verán los datos nuevos al refrescar — sin tocar el HTML.
+      Drivers will see the new data on refresh — no HTML changes needed.
     </div>
     </div>
   </div>
@@ -1089,7 +1199,7 @@ tbody td{padding:10px 16px;font-size:12px;color:var(--t1);}
   <!-- Step 3: GitHub Push -->
   <div class="adm-card" id="admStep3" style="display:none;opacity:.4;pointer-events:none;">
     <div class="adm-step-hd"><span class="adm-badge">3</span> Push to GitHub</div>
-    <p class="adm-desc">Sube el archivo <b>data.json</b> directo a tu repositorio de GitHub. Todos los drivers verán los datos nuevos al refrescar — sin descargar nada.</p>
+    <p class="adm-desc">Upload the <b>data.json</b> file directly to your GitHub repository. All drivers will see the new data on refresh — no downloads needed.</p>
     <div class="adm-row" style="margin-bottom:10px;">
       <label class="adm-lbl">GitHub Token <span style="color:var(--t3)">(se guarda solo en este navegador)</span></label>
       <input id="admGhToken" type="password" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
@@ -1207,13 +1317,33 @@ function saveMaster(a){try{localStorage.setItem('pc_master',JSON.stringify(a));}
 function pushMaster(rec){
   var m=getMaster();
   function s(d){return d instanceof Date?d.toISOString():d||null;}
+  // Build driver notes from overrides and confirm log
+  var driverNotes=[];
+  (rec.pallets||[]).forEach(function(p){
+    if(p._driverOverride){
+      driverNotes.push((p._driverLabel||'Driver override')+': ID='+p.id+(p._physicalLabelId?' Label='+p._physicalLabelId:''));
+    }
+  });
+  if(rec.confirmLog&&rec.confirmLog.length){
+    rec.confirmLog.forEach(function(c){
+      var typeLabel=c.type==='APP_MORE'?'App>Physical':c.type==='PHY_MORE'?'Physical>App':c.type==='MATCH'?'Count OK':'Confirm';
+      driverNotes.push('Confirm: '+typeLabel+' — App:'+c.expected+' Physical:'+c.scanned);
+    });
+  }
   m.push({
     id:m.length+1,savedAt:new Date().toISOString(),
-    door:rec.door,trailer:rec.trailer,order:rec.order,
+    door:rec.door||'—',trailer:rec.trailer,
+    order:rec.order,carga:rec.carga||'',
     loader:rec.loader,shift:rec.shift,
     startTime:s(rec.startTime),endTime:s(rec.endTime),
     loaded:rec.loaded,total:rec.total,wrongScans:rec.wrongScans,result:rec.result,
-    pallets:rec.pallets.map(function(p){return{id:p.id,sku:p.sku,qty:p.qty,status:p.status,scannedAt:s(p.scannedAt)};}),
+    driverNotes:driverNotes.join(' | ')||'',
+    pallets:rec.pallets.map(function(p){
+      return{id:p.id,sku:p.sku,qty:p.qty,status:p.status,scannedAt:s(p.scannedAt),
+             driverOverride:p._driverOverride?true:false,
+             physicalLabelId:p._physicalLabelId||'',
+             driverLabel:p._driverLabel||''};
+    }),
     scanLog:rec.scanLog.map(function(ev){return{time:ev.time?ev.time.toISOString():null,id:ev.id,result:ev.result,sku:ev.sku||'',so:ev.so||''};})
   });
   saveMaster(m);return m.length;
@@ -1567,16 +1697,24 @@ function lookupBOL(){
     ?'<div style="font-size:11px;color:#93c5fd;margin-bottom:8px;">Pallet <strong>'+found.palletId+'</strong> → SO <strong>'+found.so+'</strong></div>'
     :found.type==='so'
     ?'<div style="font-size:11px;color:#93c5fd;margin-bottom:8px;">SO# <strong>'+found.so+'</strong></div>':'';
+  var palDisplay=load.pallets||totalPal||'—';
+  var soCount=load.sos.length;
   document.getElementById('bolConfirmBody').innerHTML=
     fromPallet+
+    '<div style="display:flex;gap:16px;margin-bottom:14px;">'+
+      '<div style="flex:1;background:rgba(255,255,255,.07);border-radius:8px;padding:10px 14px;text-align:center;">'+
+        '<div style="font-size:10px;color:rgba(255,255,255,.4);letter-spacing:.1em;text-transform:uppercase;margin-bottom:2px;">Pallets</div>'+
+        '<div style="font-size:32px;font-weight:800;color:#fff;line-height:1;">'+palDisplay+'</div>'+
+      '</div>'+
+      '<div style="flex:1;background:rgba(255,255,255,.07);border-radius:8px;padding:10px 14px;text-align:center;">'+
+        '<div style="font-size:10px;color:rgba(255,255,255,.4);letter-spacing:.1em;text-transform:uppercase;margin-bottom:2px;">Sales Orders</div>'+
+        '<div style="font-size:32px;font-weight:800;color:#fff;line-height:1;">'+soCount+'</div>'+
+      '</div>'+
+    '</div>'+
     '<div><span style="color:rgba(255,255,255,.5);font-size:11px;">SID#</span> <strong style="font-size:16px;letter-spacing:1px;">'+sidDisplay+'</strong></div>'+
     '<div><span style="color:rgba(255,255,255,.5);font-size:11px;">Destination</span> '+destStr+'</div>'+
     '<div><span style="color:rgba(255,255,255,.5);font-size:11px;">Carrier</span> '+load.carrier+'</div>'+
     (load.door?'<div><span style="color:rgba(255,255,255,.5);font-size:11px;">Door</span> <strong>'+load.door+'</strong></div>':'')+
-    '<div><span style="color:rgba(255,255,255,.5);font-size:11px;">Pallets</span> '+
-    (load.pallets?load.pallets+' (BOL)':(totalPal?totalPal+' scanned':'—'))+
-    (load.pallets&&totalPal&&totalPal!==load.pallets?' · <span style="color:#fbbf24;">'+totalPal+' scanned so far</span>':'')+
-    ' · '+load.sos.length+' SO'+(load.sos.length!==1?'s':'')+'</div>'+
     '<div style="margin-top:6px;font-size:11px;color:rgba(255,255,255,.4);">'+soList+'</div>';
   document.getElementById('bolConfirm').style.display='block';
   st.textContent='';
@@ -1749,7 +1887,9 @@ function startLoad(){
     });
   });
 
+  var sidVal=document.getElementById('inpBOL')?document.getElementById('inpBOL').value.trim():'';
   G={door:door,trailer:trailer,loader:selLoader,shift:selShift,carga:loadLabel,
+     sid:sidVal,
      startTime:new Date(),wrongScans:0,allLog:[],
      soList:soList,curSO:curSO,
      pallets:pool,scanLog:[]};
@@ -1827,10 +1967,14 @@ function renderManifest(){
       var partialLd=!ld&&rows2.some(function(p){return p.status==='LOADED';});
       var i=rowIdx++;
       var tapAction=(ld||partialLd)?'':'onclick="manualPickPallet(\''+pid+'\')" title="Tap to enter this pallet ID"';
-      var skuLine=isMix
-        ?'<span style="display:inline-block;background:rgba(245,158,11,.18);color:#fbbf24;font-size:9px;font-weight:700;letter-spacing:.08em;padding:1px 5px;border-radius:3px;margin-right:4px;">MIX</span>'
-         +rows2.length+' items · '+rows2.reduce(function(a,p){return a+p.qty;},0)+'u total'
-        :rows2[0].sku+' · '+rows2[0].qty+'u';
+      var skuLine;
+      if(isMix){
+        var mixTag='<span style="display:inline-block;background:rgba(245,158,11,.18);color:#fbbf24;font-size:9px;font-weight:700;letter-spacing:.08em;padding:1px 5px;border-radius:3px;margin-right:4px;">MIX</span>';
+        var skuDetails=rows2.map(function(p){return '<span style="display:block;font-size:9px;color:rgba(255,255,255,.55);line-height:1.5;">'+p.sku+' &nbsp;·&nbsp; '+p.qty+'u</span>';}).join('');
+        skuLine=mixTag+rows2.reduce(function(a,p){return a+p.qty;},0)+'u total'+skuDetails;
+      }else{
+        skuLine='<span style="font-size:10px;color:rgba(255,255,255,.7);">'+rows2[0].sku+'</span> <span style="color:rgba(255,255,255,.4);font-size:9px;">· '+rows2[0].qty+'u</span>';
+      }
       var checkIcon=ld
         ?''  // green checkmark handled by .loaded class
         :'<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.2)" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="m18 2 4 4-10 10H8v-4L18 2z"/></svg>';
@@ -2080,12 +2224,32 @@ function doConfirm(){
     startTime:G.startTime,endTime:new Date(),
     loaded:ld,total:G.pallets.length,wrongScans:G.wrongScans,
     result:res,
+    confirmLog:G.confirmLog||[],
     pallets:G.pallets.slice(),scanLog:G.allLog.slice()
   });
   // \u2500\u2500 Auto-save to SharePoint via Power Automate \u2500\u2500
   (function(snap){
+    // Build driver overrides list
+    var driverOverrides=snap.pallets.filter(function(p){return p._driverOverride;}).map(function(p){
+      return{palletId:p.id,physicalLabelId:p._physicalLabelId||'',label:p._driverLabel||'',scannedAt:p.scannedAt?p.scannedAt.toISOString():null};
+    });
+    // Build confirm log summary
+    var confirmSummary=(snap.confirmLog||[]).map(function(c){
+      var t=c.type==='APP_MORE'?'App>Physical':c.type==='PHY_MORE'?'Physical>App':c.type==='MATCH'?'Count OK':'Confirm';
+      return t+' App:'+c.expected+' Physical:'+c.scanned;
+    }).join(' | ');
+    // Build driver notes string
+    var driverNotes=[];
+    driverOverrides.forEach(function(d){driverNotes.push('Driver added: '+d.palletId+(d.physicalLabelId?' Label:'+d.physicalLabelId:''));});
+    if(confirmSummary)driverNotes.push('Confirm log: '+confirmSummary);
+    // Start time formatted
+    var st=snap.startTime instanceof Date?snap.startTime:new Date(snap.startTime);
+    var timeStr=st.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:false});
     var payload={
-      date:snap.startTime.toLocaleDateString('en-US'),
+      date:st.toLocaleDateString('en-US'),
+      time:timeStr,
+      door:snap.door||'',
+      sid:snap.sid||'',
       trailer:snap.trailer,
       salesOrder:snap.order,
       load:snap.carga,
@@ -2094,7 +2258,11 @@ function doConfirm(){
       totalPallets:snap.total,
       scanned:snap.loaded,
       missing:snap.total-snap.loaded,
-      result:snap.result
+      wrongScans:snap.wrongScans||0,
+      result:snap.result,
+      driverNotes:driverNotes.join(' | ')||'',
+      driverOverridesCount:driverOverrides.length,
+      driverOverrides:driverOverrides
     };
     fetch(POWER_AUTOMATE_URL,{
       method:'POST',
@@ -2104,8 +2272,9 @@ function doConfirm(){
       if(r.ok||r.status===202){toast('\u2713 Saved to SharePoint Excel','tok');}
       else{toast('SharePoint save failed ('+r.status+') \u2014 local record kept','twarn');}
     }).catch(function(){toast('SharePoint offline \u2014 local record kept','twarn');});
-  })({startTime:G.startTime,trailer:G.trailer,order:G.curSO,carga:G.carga,
-      loader:G.loader,shift:G.shift,total:G.pallets.length,loaded:ld,result:res});
+  })({startTime:G.startTime,door:G.door,trailer:G.trailer,sid:G.sid||'',order:G.curSO,carga:G.carga,
+      loader:G.loader,shift:G.shift,total:G.pallets.length,loaded:ld,result:res,
+      wrongScans:G.wrongScans,confirmLog:G.confirmLog||[],pallets:G.pallets.slice()});
   toast('\u2713 Load '+mid+' saved \u2014 '+getMaster().length+' total records','tok');
   G=null;
 
@@ -2164,19 +2333,25 @@ function renderMaster(){
   if(!m.length)return;
   document.getElementById('mTbody').innerHTML=m.slice().reverse().map(function(r){
     var dt=new Date(r.startTime),dur=Math.round((new Date(r.endTime)-dt)/60000);
+    var notes=r.driverNotes||'';
+    var noteCell=notes
+      ?'<td style="font-size:9px;color:rgba(245,158,11,.8);max-width:180px;white-space:normal;line-height:1.4;" title="'+notes.replace(/"/g,"'")+'">'+notes+'</td>'
+      :'<td style="color:var(--t3);font-size:10px;">—</td>';
     return '<tr>'
       +'<td class="td-m" style="color:var(--t3)">'+r.id+'</td>'
       +'<td class="td-m">'+dt.toLocaleDateString()+'</td>'
-      +'<td class="td-m">'+dt.toLocaleTimeString('en-US',{hour12:false})+'</td>'
-      +'<td>'+r.door+'</td>'
+      +'<td class="td-m">'+dt.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:false})+'</td>'
+      +'<td>'+(r.door&&r.door!=='—'?'<strong>'+r.door+'</strong>':'<span style="color:var(--t3)">—</span>')+'</td>'
       +'<td class="td-m td-gold">'+r.trailer+'</td>'
       +'<td class="td-m">'+r.order+'</td>'
+      +'<td style="color:var(--t3);font-size:10px;">'+(r.carga||'—')+'</td>'
       +'<td>'+r.loader+'</td>'
       +'<td style="color:var(--t3)">'+r.shift+'</td>'
       +'<td class="td-m" style="color:var(--t3)">'+dur+'</td>'
       +'<td class="td-m" style="color:'+(r.loaded===r.total?'var(--emerald)':'var(--amber)')+'">'+r.loaded+'/'+r.total+'</td>'
       +'<td class="td-m" style="color:'+(r.wrongScans?'var(--crimson)':'var(--t3)')+'">'+r.wrongScans+'</td>'
       +'<td class="'+(r.result==='COMPLETE'?'td-ok':'td-part')+'">'+r.result+'</td>'
+      +noteCell
       +'</tr>';
   }).join('');
 }
@@ -2185,30 +2360,87 @@ function renderMaster(){
 function exportMaster(){
   var m=getMaster();if(!m.length){toast('No records to export','twarn');return;}
   var wb=XLSX.utils.book_new();
-  var h=['#','Date','Time','Door','Trailer','SO','Loader','Shift','Min','Loaded','Total','Wrong','Result'];
+  // Sheet 1 \u2014 Load Summary
+  var h=['#','Date','Time','Door','Trailer','Sales Order','Load','Loader','Shift','Duration (min)','Scanned','Total Pallets','Missing','Wrong Scans','Result','Notes'];
   var rows=m.map(function(r){
     var dt=new Date(r.startTime);
-    return[r.id,dt.toLocaleDateString(),dt.toLocaleTimeString('en-US',{hour12:false}),
-      r.door,r.trailer,r.order,r.loader,r.shift,
-      Math.round((new Date(r.endTime)-dt)/60000),r.loaded,r.total,r.wrongScans,r.result];
+    var dur=Math.round((new Date(r.endTime)-dt)/60000);
+    return[r.id,
+      dt.toLocaleDateString('en-US'),
+      dt.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:false}),
+      r.door||'',r.trailer,r.order,r.carga||'',r.loader,r.shift,
+      dur,r.loaded,r.total,(r.total-r.loaded),r.wrongScans,r.result,r.driverNotes||''];
   });
   var ws=XLSX.utils.aoa_to_sheet([h].concat(rows));
+  // Column widths
+  ws['!cols']=[{wch:4},{wch:12},{wch:8},{wch:6},{wch:10},{wch:10},{wch:8},{wch:10},{wch:6},{wch:6},{wch:8},{wch:8},{wch:8},{wch:8},{wch:10},{wch:40}];
   XLSX.utils.book_append_sheet(wb,ws,'Load Summary');
-  var h2=['#','Trailer','SO','Loader','Date','Pallet ID','SKU','Qty','Status','Scanned'];
+
+  // Sheet 2 \u2014 All Pallets (including driver overrides)
+  var h2=['Load#','Date','Time','Door','Trailer','Sales Order','Load','Loader','Pallet ID','Physical Label ID','SKU','Qty','Status','Scanned At','Driver Override','Driver Note'];
   var r2=[];
   m.forEach(function(r){
-    var d=new Date(r.startTime).toLocaleDateString();
-    (r.pallets||[]).forEach(function(p){r2.push([r.id,r.trailer,r.order,r.loader,d,p.id,p.sku,p.qty,p.status,p.scannedAt?new Date(p.scannedAt).toLocaleTimeString():'-']);});
+    var dt=new Date(r.startTime);
+    var d=dt.toLocaleDateString('en-US');
+    var t=dt.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:false});
+    (r.pallets||[]).forEach(function(p){
+      r2.push([r.id,d,t,r.door||'',r.trailer,r.order,r.carga||'',r.loader,
+        p.id,p.physicalLabelId||'',p.sku,p.qty,p.status,
+        p.scannedAt?new Date(p.scannedAt).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:false}):'\u2014',
+        p.driverOverride?'YES':'',p.driverLabel||'']);
+    });
   });
-  var ws2=XLSX.utils.aoa_to_sheet([h2].concat(r2));XLSX.utils.book_append_sheet(wb,ws2,'All Pallets');
-  var h3=['#','Trailer','SO','Date','Pallet ID','SKU','Qty'];var r3=[];
-  m.forEach(function(r){var d=new Date(r.startTime).toLocaleDateString();(r.pallets||[]).filter(function(p){return p.status!=='LOADED';}).forEach(function(p){r3.push([r.id,r.trailer,r.order,d,p.id,p.sku,p.qty]);});});
-  if(r3.length){var ws3=XLSX.utils.aoa_to_sheet([h3].concat(r3));XLSX.utils.book_append_sheet(wb,ws3,'Missing Pallets');}
-  var h4=['#','Trailer','SO','Loader','Time','Pallet ID','Result'];var r4=[];
-  m.forEach(function(r){(r.scanLog||[]).forEach(function(s){r4.push([r.id,r.trailer,r.order,r.loader,new Date(s.time).toLocaleString(),s.id,s.result]);});});
-  if(r4.length){var ws4=XLSX.utils.aoa_to_sheet([h4].concat(r4));XLSX.utils.book_append_sheet(wb,ws4,'Scan Log');}
-  XLSX.writeFile(wb,'PalletCheck_'+new Date().toLocaleDateString().replace(/\//g,'-')+'.xlsx');
-  toast('Exported \u2014 '+m.length+' records','tok');
+  var ws2=XLSX.utils.aoa_to_sheet([h2].concat(r2));
+  ws2['!cols']=[{wch:5},{wch:12},{wch:8},{wch:6},{wch:10},{wch:10},{wch:8},{wch:10},{wch:16},{wch:16},{wch:12},{wch:5},{wch:9},{wch:10},{wch:8},{wch:30}];
+  XLSX.utils.book_append_sheet(wb,ws2,'All Pallets');
+
+  // Sheet 3 \u2014 Missing Pallets
+  var h3=['Load#','Date','Door','Trailer','Sales Order','Load','Loader','Pallet ID','SKU','Qty'];
+  var r3=[];
+  m.forEach(function(r){
+    var d=new Date(r.startTime).toLocaleDateString('en-US');
+    (r.pallets||[]).filter(function(p){return p.status!=='LOADED'&&!p.driverOverride;}).forEach(function(p){
+      r3.push([r.id,d,r.door||'',r.trailer,r.order,r.carga||'',r.loader,p.id,p.sku,p.qty]);
+    });
+  });
+  if(r3.length){
+    var ws3=XLSX.utils.aoa_to_sheet([h3].concat(r3));
+    XLSX.utils.book_append_sheet(wb,ws3,'Missing Pallets');
+  }
+
+  // Sheet 4 \u2014 Driver Overrides (new sheet)
+  var h4ov=['Load#','Date','Time','Door','Trailer','Sales Order','Load','Loader','Pallet ID','Physical Label ID','Driver Note'];
+  var r4ov=[];
+  m.forEach(function(r){
+    var dt=new Date(r.startTime);
+    var d=dt.toLocaleDateString('en-US');
+    var t=dt.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:false});
+    (r.pallets||[]).filter(function(p){return p.driverOverride;}).forEach(function(p){
+      r4ov.push([r.id,d,t,r.door||'',r.trailer,r.order,r.carga||'',r.loader,p.id,p.physicalLabelId||'',p.driverLabel||'']);
+    });
+  });
+  if(r4ov.length){
+    var ws4ov=XLSX.utils.aoa_to_sheet([h4ov].concat(r4ov));
+    XLSX.utils.book_append_sheet(wb,ws4ov,'Driver Overrides');
+  }
+
+  // Sheet 5 \u2014 Scan Log
+  var h5=['Load#','Date','Door','Trailer','SO','Load','Loader','Time','Pallet ID','Result'];
+  var r5=[];
+  m.forEach(function(r){
+    var d=new Date(r.startTime).toLocaleDateString('en-US');
+    (r.scanLog||[]).forEach(function(s){
+      r5.push([r.id,d,r.door||'',r.trailer,r.order,r.carga||'',r.loader,
+        new Date(s.time).toLocaleString('en-US'),s.id,s.result]);
+    });
+  });
+  if(r5.length){
+    var ws5=XLSX.utils.aoa_to_sheet([h5].concat(r5));
+    XLSX.utils.book_append_sheet(wb,ws5,'Scan Log');
+  }
+
+  XLSX.writeFile(wb,'PalletCheck_'+new Date().toLocaleDateString('en-US').replace(/\//g,'-')+'.xlsx');
+  toast('Exported \u2014 '+m.length+' records \u00b7 '+r2.length+' pallets','tok');
 }
 function clearMaster(){var n=getMaster().length;if(!n){toast('Already empty','twarn');return;}if(!confirm('Delete ALL '+n+' records?\n\nExport first if needed.'))return;try{localStorage.removeItem('pc_master');}catch(e){}renderMaster();toast('Cleared','twarn');}
 
@@ -2540,7 +2772,7 @@ function admPushGitHub(){
   var GH_FILE='data.json';
   var GH_BRANCH='main';
   var token=document.getElementById('admGhToken').value.trim();
-  if(!token){alert('Ingresa tu GitHub Token primero.');return;}
+  if(!token){alert('Enter your GitHub Token first.');return;}
   if(!admJsonBlob||!admJsonBlob._jsonStr){alert('Procesa los archivos primero.');return;}
   var st=document.getElementById('admUploadStatus');
   st.textContent='⧗ Subiendo a GitHub…';st.style.color='var(--t3)';
@@ -2576,7 +2808,7 @@ function admPushGitHub(){
   .then(function(r){
     document.getElementById('admBtnPush').disabled=false;
     if(r.ok||r.status===201){
-      st.innerHTML='<span style="color:var(--emerald);">✔ data.json subido ('+r.status+') — todos verán los datos nuevos al refrescar.</span>';
+      st.innerHTML='<span style="color:var(--emerald);">✔ data.json uploaded ('+r.status+') — everyone will see the new data on refresh.</span>';
       try{var d=JSON.parse(admJsonBlob._jsonStr);Object.assign(DB,d.DB||{});if(d.DOCK)Object.assign(DOCK_DB,d.DOCK);}catch(e){}
     }else{
       r.text().then(function(t){
@@ -2589,6 +2821,174 @@ function admPushGitHub(){
     document.getElementById('admBtnPush').disabled=false;
     st.innerHTML='<span style="color:#e74c3c;">Error: '+e.message+'</span><br><small>URL: '+apiUrl+'</small>';
   });
+}
+
+// =========================================================
+// DRIVER OVERRIDE FUNCTIONS
+// =========================================================
+
+function ovModalClose(id){
+  document.getElementById(id).classList.remove('active');
+}
+
+// --- Add ID ---
+function ovAddIDOpen(){
+  var inp=document.getElementById('ovAddInput');
+  inp.value='';
+  document.getElementById('ovAddModal').classList.add('active');
+  setTimeout(function(){inp.focus();},120);
+}
+
+function ovAddIDSubmit(fixedVal){
+  var sysId=fixedVal!=null?fixedVal:document.getElementById('ovAddInput').value.trim();
+  var labelId=fixedVal!=null?(fixedVal==='MIX'?'MIX':''):document.getElementById('ovAddLabelInput').value.trim();
+  if(!sysId&&!labelId){toast('Enter at least one ID.','twarn');return;}
+  if(!G||!G.pallets){
+    ovModalClose('ovAddModal');
+    toast('Start a session first before adding pallets.','twarn');
+    return;
+  }
+  var isMix=(String(sysId).toUpperCase()==='MIX');
+  var entryId=isMix?'MIX-'+Date.now():(sysId||('LABEL-'+labelId));
+  var soRef=G.soList&&G.soList.length?G.soList[0]:(G.curSO||'MANUAL');
+  var palletEntry={
+    id: entryId,
+    sku: isMix?'MIX':'DRIVER-ADD',
+    qty: 1,
+    lot:'',
+    so: soRef,
+    status:'LOADED',
+    scannedAt: new Date(),
+    _driverOverride: true,
+    _physicalLabelId: labelId||sysId,
+    _driverLabel: isMix?'MIX — Driver added':'Driver verified — not in system'
+  };
+  G.pallets.push(palletEntry);
+  ovModalClose('ovAddModal');
+  if(typeof updateKPIs==='function')updateKPIs();
+  if(typeof renderManifest==='function')renderManifest();
+  toast((isMix?'MIX pallet':'Pallet '+entryId)+' added ✓','tinfo');
+  // After adding, run the Confirm Load check → then go back to setup
+  setTimeout(function(){ovConfirmLoadAndFinish();},400);
+}
+
+function ovAddIDConfirm(){
+  var sysId=document.getElementById('ovAddInput').value.trim();
+  var labelId=document.getElementById('ovAddLabelInput').value.trim();
+  if(!sysId&&!labelId){toast('Enter at least one pallet ID.','twarn');return;}
+  ovAddIDSubmit(null); // null = read from inputs
+}
+
+// After adding a driver pallet, confirm load and return to setup
+function ovConfirmLoadAndFinish(){
+  var expected=G&&G.pallets?G.pallets.length:0;
+  var scannedCount=G&&G.pallets?G.pallets.filter(function(p){return p.status==='LOADED';}).length:0;
+  if(scannedCount===expected){
+    // All accounted for — confirm and go home
+    _logConfirm('MATCH_AFTER_ADD',scannedCount,expected);
+    document.getElementById('ovConfirmOKSub').textContent=
+      scannedCount+' pallets confirmed including the added pallet. Returning to Load...';
+    document.getElementById('ovConfirmOKModal').classList.add('active');
+    setTimeout(function(){ovModalClose('ovConfirmOKModal');goView('setup');},2200);
+  } else {
+    // Still a mismatch — show the normal confirm flow
+    ovConfirmLoad();
+  }
+}
+
+// --- Confirm Load ---
+function ovConfirmLoad(){
+  if(!G||!G.pallets){toast('Start a session first.','twarn');return;}
+  var expected=G.pallets.length;
+  var scannedCount=G.pallets.filter(function(p){return p.status==='LOADED';}).length;
+  if(expected===0||scannedCount===expected){
+    document.getElementById('ovConfirmOKSub').textContent=
+      scannedCount+' pallets escaneados. Carga confirmada por el driver.';
+    document.getElementById('ovConfirmOKModal').classList.add('active');
+    _logConfirm('MATCH',scannedCount,expected);
+    return;
+  }
+  var diff=Math.abs(scannedCount-expected);
+  var appMore=(expected>scannedCount);
+  document.getElementById('ovMismatchTitle').textContent='Count Mismatch';
+  document.getElementById('ovMismatchSub').textContent=
+    'System manifest: '+expected+' pallets  ·  Scanned: '+scannedCount+'  ·  Difference: '+diff;
+  var opts='';
+  if(appMore){
+    opts+=
+      '<div class="ov-mismatch-opt" onclick="ovMismatchChoose(\'APP_MORE\')">'+
+        '<div class="opt-title">📋 App has more than physical</div>'+
+        '<div class="opt-sub">System shows '+expected+' pallets but only '+scannedCount+' were physically scanned. '+
+        'Driver confirms the difference — no loading error occurred.</div>'+
+      '</div>'+
+      '<div class="ov-mismatch-opt" onclick="ovMismatchChoose(\'PHY_MORE\')">'+
+        '<div class="opt-title">📦 Physical has more than app</div>'+
+        '<div class="opt-sub">There are extra physical pallets not reflected in the system. Use + Add ID to register them.</div>'+
+      '</div>';
+  } else {
+    opts+=
+      '<div class="ov-mismatch-opt" onclick="ovMismatchChoose(\'PHY_MORE\')">'+
+        '<div class="opt-title">📦 Physical has more than app</div>'+
+        '<div class="opt-sub">Found '+scannedCount+' physical pallets but system only shows '+expected+'. '+
+        'There are extra pallets not registered in the system.</div>'+
+      '</div>'+
+      '<div class="ov-mismatch-opt" onclick="ovMismatchChoose(\'APP_MORE\')">'+
+        '<div class="opt-title">📋 App has more than physical</div>'+
+        '<div class="opt-sub">System has more records than physical pallets present. Driver confirms data discrepancy.</div>'+
+      '</div>';
+  }
+  document.getElementById('ovMismatchOpts').innerHTML=opts;
+  document.getElementById('ovMismatchModal').classList.add('active');
+}
+
+function ovMismatchChoose(type){
+  ovModalClose('ovMismatchModal');
+  var expected=G&&G.pallets?G.pallets.length:0;
+  var scannedCount=G&&G.pallets?G.pallets.filter(function(p){return p.status==='LOADED';}).length:0;
+  var msg='';
+  if(type==='APP_MORE'){
+    msg='Driver confirmed: app shows more than physical. App: '+expected+' | Physical: '+scannedCount+'. Data discrepancy recorded.';
+  } else {
+    msg='Driver confirmed: more physical pallets than app shows. Physical: '+scannedCount+' | App: '+expected+'.';
+  }
+  _logConfirm(type,scannedCount,expected);
+  document.getElementById('ovConfirmOKSub').textContent=msg;
+  document.getElementById('ovConfirmOKModal').classList.add('active');
+  if(type==='PHY_MORE'){
+    setTimeout(function(){
+      if(confirm('Would you like to add the extra pallets now using + Add ID?')){
+        ovModalClose('ovConfirmOKModal');
+        ovAddIDOpen();
+      }
+    },400);
+  }
+}
+
+function _logConfirm(type,scanned,expected){
+  if(!G)return;
+  G.confirmLog=G.confirmLog||[];
+  G.confirmLog.push({ts:new Date().toISOString(),type:type,scanned:scanned,expected:expected,
+    carga:G.carga||'?'});
+}
+
+// --- Back / Cancel ---
+function ovBack(){
+  // Go back to setup/home view
+  if(typeof goView==='function'){goView('home');}
+  G=null;
+}
+
+function ovCancel(){
+  if(!G||!G.pallets){return;}
+  if(!confirm('Cancel current scanning session? All progress will be lost.'))return;
+  G.pallets=G.pallets.filter(function(p){return !p._driverOverride;});
+  G.pallets.forEach(function(p){p.status='PENDING';p.scannedAt=null;});
+  G.wrongScans=0;G.allLog=[];G.scanLog=[];
+  if(typeof refreshKPIs==='function')refreshKPIs();
+  if(typeof renderManifest==='function')renderManifest();
+  var res=document.getElementById('result');
+  if(res)res.className='result idle';
+  toast('Session cancelled — pallets reset','twarn');
 }
 
 </script>
