@@ -1067,13 +1067,13 @@ tbody td{padding:10px 16px;font-size:12px;color:var(--t1);}
     <div class="adm-step-hd"><span class="adm-badge">2</span> Preview Generated Data</div>
     <div id="admPreview" style="font-size:12px;font-family:var(--mono);color:var(--t2);background:#f8fafc;border:1px solid var(--slate3);border-radius:8px;padding:14px;line-height:2;"></div>
     <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
-      <button class="adm-btn-primary" id="admBtnSave" onclick="admSaveDirect()">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-        <span id="admBtnSaveLbl">Select destination &amp; save</span>
+      <button class="adm-btn-primary" id="admBtnSave" onclick="admStep3On()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
+        <span id="admBtnSaveLbl">Push to GitHub →</span>
       </button>
       <button class="adm-btn-secondary" onclick="admDownloadHTML()">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        Download (fallback)
+        Download JSON (fallback)
       </button>
       <button class="adm-btn-secondary" onclick="window.open('https://heartlandfpg-my.sharepoint.com/:f:/p/kevin_castillo/IgA4aWFSyhXqRI4AqQT7OmotAWbJheUzhJp-co7PEjIdnYM?e=QrTOIg','_blank')">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
@@ -1081,26 +1081,26 @@ tbody td{padding:10px 16px;font-size:12px;color:var(--t1);}
       </button>
     </div>
     <div id="admSaveHint" style="margin-top:8px;font-size:11px;font-family:var(--mono);color:var(--t3);line-height:1.8;">
-      First time: select the existing <b>PalletCheck.html</b> in your OneDrive folder → overwrites it directly, bypassing Downloads.
+      Los drivers verán los datos nuevos al refrescar — sin tocar el HTML.
     </div>
     </div>
   </div>
 
-  <!-- Step 3: SharePoint upload -->
+  <!-- Step 3: GitHub Push -->
   <div class="adm-card" id="admStep3" style="display:none;opacity:.4;pointer-events:none;">
-    <div class="adm-step-hd"><span class="adm-badge">3</span> Push to SharePoint</div>
-    <p class="adm-desc">Sign in with your Heartland Microsoft account. The app will upload DBData.json to your SharePoint folder. All loaders will see the new data immediately on next page load.</p>
-    <div id="admMsalStatus" style="margin-bottom:12px;font-size:12px;font-family:var(--mono);color:var(--t3);">Not signed in</div>
-    <div style="display:flex;gap:10px;flex-wrap:wrap;">
-      <button class="adm-btn-ms" id="admBtnLogin" onclick="admLogin()">
-        <svg width="16" height="16" viewBox="0 0 24 24"><rect x="1" y="1" width="10" height="10" fill="#f25022"/><rect x="13" y="1" width="10" height="10" fill="#7fba00"/><rect x="1" y="13" width="10" height="10" fill="#00a4ef"/><rect x="13" y="13" width="10" height="10" fill="#ffb900"/></svg>
-        Sign in with Microsoft
-      </button>
-      <button class="adm-btn-primary" id="admBtnUpload" onclick="admUpload()" disabled>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
-        Upload to SharePoint
-      </button>
+    <div class="adm-step-hd"><span class="adm-badge">3</span> Push to GitHub</div>
+    <p class="adm-desc">Sube el archivo <b>data.json</b> directo a tu repositorio de GitHub. Todos los drivers verán los datos nuevos al refrescar — sin descargar nada.</p>
+    <div class="adm-row" style="margin-bottom:10px;">
+      <label class="adm-lbl">GitHub Token <span style="color:var(--t3)">(se guarda solo en este navegador)</span></label>
+      <input id="admGhToken" type="password" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
+        style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--slate3);font-family:var(--mono);font-size:13px;background:var(--slate2);color:var(--navy);box-sizing:border-box;"
+        oninput="admSaveToken()" autocomplete="off">
+      <div style="font-size:11px;color:var(--t3);margin-top:4px;">Settings → Developer settings → Personal access tokens → <b>repo</b> scope</div>
     </div>
+    <button class="adm-btn-primary" id="admBtnPush" onclick="admPushGitHub()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
+      Push data.json to GitHub
+    </button>
     <div id="admUploadStatus" style="margin-top:10px;font-size:12px;font-family:var(--mono);color:var(--t3);min-height:18px;"></div>
   </div>
 
@@ -1137,19 +1137,9 @@ var _dataReady=false;
 (function(){
   var ds=document.getElementById('dataStatus');
   if(ds)ds.style.display='none';
-  // DATA_PLACEHOLDER — replaced by Admin Panel with inline JSON
-  var inlineData=JSON.parse(document.getElementById('_pcdata').textContent); // INLINE_DATA_TAG
-  if(inlineData){
-    Object.assign(DB,inlineData.DB||{});
-    if(inlineData.DOCK)Object.assign(DOCK_DB,inlineData.DOCK);
-    _dataReady=true;
-    if(ds)ds.style.display='none';
-    console.log('[PalletCheck] Inline data loaded: '+Object.keys(DB).length+' SOs, '+Object.keys(DOCK_DB).length+' BOL loads');
-    return;
-  }
-  // Fallback: try fetch DBData.json
+  // Try external data.json first (GitHub), then inline fallback
   var base=window.location.href.replace(/[^/]*$|\?.*$/g,'');
-  fetch(base+'DBData.json')
+  fetch(base+'data.json?_='+Date.now())
     .then(function(r){if(!r.ok)throw new Error(r.status);return r.json();})
     .then(function(d){
       Object.assign(DB,d.DB||{});
@@ -1161,10 +1151,25 @@ var _dataReady=false;
       console.log('[PalletCheck] Data loaded: '+Object.keys(DB).length+' SOs');
     })
     .catch(function(e){
-      console.error('[PalletCheck] DBData.json load failed:',e);
-      if(ds){ds.textContent='⚠ Error loading data — use Admin Panel to update';ds.style.color='#e74c3c';}
+      console.warn('[PalletCheck] data.json not found, trying inline…');
+      // Fallback: inline _pcdata
+      try{
+        var pd=document.getElementById('_pcdata');
+        if(pd){
+          var inlineData=JSON.parse(pd.textContent||'{}');
+          if(inlineData&&Object.keys(inlineData.DB||{}).length){
+            Object.assign(DB,inlineData.DB||{});
+            if(inlineData.DOCK)Object.assign(DOCK_DB,inlineData.DOCK);
+            _dataReady=true;
+            if(ds)ds.style.display='none';
+            console.log('[PalletCheck] Inline data loaded: '+Object.keys(DB).length+' SOs');
+            return;
+          }
+        }
+      }catch(e2){}
+      if(ds){ds.textContent='⚠ Sin datos — ve a Admin y sube los archivos';ds.style.color='#e74c3c';}
       var b=document.querySelector('.btn-start');
-      if(b){b.style.background='#c0392b';b.textContent='⚠ Data not loaded — go to Admin tab';}
+      if(b){b.style.background='#c0392b';b.textContent='⚠ Sin datos — ir a Admin';}
     });
 })();
 
@@ -2294,7 +2299,7 @@ function admProcess(){
       DOCK_DB=built.DOCK;
       var dockCount=Object.keys(built.DOCK).length;
       var dockLine='<br>✓ BOL loads (Dock Activity): <strong>'+dockCount+'</strong>';
-      admJsonBlob=new Blob([JSON.stringify(built)],{type:'application/json'});
+      var _js=JSON.stringify(built);admJsonBlob=new Blob([_js],{type:'application/json'});admJsonBlob._jsonStr=_js;
       var s=built.DB, soCount=Object.keys(s).length;
       var palCount=Object.values(s).reduce(function(a,b){return a+b.length;},0);
       var lnkCount=0; // LINKS removed
@@ -2451,8 +2456,13 @@ function admBuildDB(sohWb){
 function admStep2On(){
   var s2=document.getElementById('admStep2');
   s2.style.opacity='1';s2.style.pointerEvents='auto';
+}
+function admStep3On(){
   var s3=document.getElementById('admStep3');
-  s3.style.opacity='1';s3.style.pointerEvents='auto';
+  s3.style.display='block';s3.style.opacity='1';s3.style.pointerEvents='auto';
+  s3.scrollIntoView({behavior:'smooth',block:'start'});
+  // Restore saved token
+  try{var t=localStorage.getItem('pc_gh_token');if(t)document.getElementById('admGhToken').value=t;}catch(e){}
 }
 
 function admDownloadJSON(){
@@ -2491,6 +2501,55 @@ function admSaveDirect(){
   a.click();
   document.getElementById('admSaveHint').innerHTML=
     '<span style="color:var(--emerald);">✔ Downloaded — replace your GitHub Pages file with this.</span>';
+}
+
+// ── GITHUB PUSH ──
+var GH_OWNER='kvnc73-ctrl';
+var GH_REPO='palletcheck';
+var GH_FILE='data.json';
+var GH_BRANCH='main';
+
+function admSaveToken(){
+  try{localStorage.setItem('pc_gh_token',document.getElementById('admGhToken').value);}catch(e){}
+}
+
+function admPushGitHub(){
+  var token=document.getElementById('admGhToken').value.trim();
+  if(!token){alert('Ingresa tu GitHub Token primero.');return;}
+  if(!admJsonBlob||!admJsonBlob._jsonStr){alert('Procesa los archivos primero.');return;}
+  var st=document.getElementById('admUploadStatus');
+  st.textContent='⧗ Subiendo a GitHub…';st.style.color='var(--t3)';
+  document.getElementById('admBtnPush').disabled=true;
+
+  var apiUrl='https://api.github.com/repos/'+GH_OWNER+'/'+GH_REPO+'/contents/'+GH_FILE;
+  var headers={'Authorization':'token '+token,'Content-Type':'application/json','Accept':'application/vnd.github+json'};
+
+  // First GET to get current SHA (needed for update)
+  fetch(apiUrl,{headers:headers})
+  .then(function(r){return r.ok?r.json():null;})
+  .then(function(existing){
+    var body={
+      message:'data update '+new Date().toLocaleString('en-US'),
+      content:btoa(unescape(encodeURIComponent(admJsonBlob._jsonStr))),
+      branch:GH_BRANCH
+    };
+    if(existing&&existing.sha)body.sha=existing.sha;
+    return fetch(apiUrl,{method:'PUT',headers:headers,body:JSON.stringify(body)});
+  })
+  .then(function(r){
+    document.getElementById('admBtnPush').disabled=false;
+    if(r.ok||r.status===201){
+      st.innerHTML='<span style="color:var(--emerald);">✔ data.json subido — todos verán los datos nuevos al refrescar.</span>';
+      // Update in-memory data immediately
+      try{var d=JSON.parse(admJsonBlob._jsonStr);Object.assign(DB,d.DB||{});if(d.DOCK)Object.assign(DOCK_DB,d.DOCK);}catch(e){}
+    }else{
+      r.text().then(function(t){st.textContent='Error '+r.status+': '+t;st.style.color='#e74c3c';});
+    }
+  })
+  .catch(function(e){
+    document.getElementById('admBtnPush').disabled=false;
+    st.textContent='Error: '+e.message;st.style.color='#e74c3c';
+  });
 }
 
 </script>
