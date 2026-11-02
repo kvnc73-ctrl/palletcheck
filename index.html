@@ -2522,43 +2522,47 @@ function admPushGitHub(){
   document.getElementById('admBtnPush').disabled=true;
 
   var apiUrl='https://api.github.com/repos/'+GH_OWNER+'/'+GH_REPO+'/contents/'+GH_FILE;
-  var headers={'Authorization':'token '+token,'Content-Type':'application/json','Accept':'application/vnd.github+json'};
+  var headers={'Authorization':'Bearer '+token,'Content-Type':'application/json','Accept':'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28'};
 
-  // First GET to get current SHA (needed for update)
-  st.textContent='⧗ Verificando repositorio…';
+  st.innerHTML='⧗ Verificando repositorio…<br><small style="opacity:.6">URL: '+apiUrl+'</small>';
+
   fetch(apiUrl,{headers:headers})
   .then(function(r){
-    st.textContent='⧗ GET status: '+r.status+' — subiendo archivo…';
-    return r.ok?r.json():r.status===404?null:r.json().then(function(e){throw new Error('GET '+r.status+': '+(e.message||''));});
+    st.innerHTML='⧗ GET → '+r.status+(r.status===200?' (archivo existe, obteniendo SHA…)':r.status===404?' (archivo nuevo)':' — error')+'<br><small style="opacity:.6">URL: '+apiUrl+'</small>';
+    return r.ok?r.json():r.status===404?null:r.json().then(function(e){throw new Error('GET '+r.status+': '+(e.message||JSON.stringify(e)));});
   })
   .then(function(existing){
     var content;
     try{content=btoa(unescape(encodeURIComponent(admJsonBlob._jsonStr)));}
     catch(e){throw new Error('btoa failed: '+e.message);}
     var body={
-      message:'data update '+new Date().toLocaleString('en-US'),
+      message:'data update '+new Date().toISOString(),
       content:content,
       branch:GH_BRANCH
     };
-    if(existing&&existing.sha){body.sha=existing.sha;st.textContent='⧗ Actualizando archivo existente…';}
-    else{st.textContent='⧗ Creando archivo nuevo…';}
+    if(existing&&existing.sha){
+      body.sha=existing.sha;
+      st.innerHTML='⧗ Actualizando archivo existente (sha: '+existing.sha.substring(0,7)+')…';
+    }else{
+      st.innerHTML='⧗ Creando archivo nuevo en rama '+GH_BRANCH+'…';
+    }
     return fetch(apiUrl,{method:'PUT',headers:headers,body:JSON.stringify(body)});
   })
   .then(function(r){
     document.getElementById('admBtnPush').disabled=false;
     if(r.ok||r.status===201){
-      st.innerHTML='<span style="color:var(--emerald);">✔ data.json subido — todos verán los datos nuevos al refrescar.</span>';
+      st.innerHTML='<span style="color:var(--emerald);">✔ data.json subido ('+r.status+') — todos verán los datos nuevos al refrescar.</span>';
       try{var d=JSON.parse(admJsonBlob._jsonStr);Object.assign(DB,d.DB||{});if(d.DOCK)Object.assign(DOCK_DB,d.DOCK);}catch(e){}
     }else{
       r.text().then(function(t){
-        var msg='';try{msg=JSON.parse(t).message;}catch(e){msg=t.substring(0,200);}
-        st.textContent='Error PUT '+r.status+': '+msg;st.style.color='#e74c3c';
+        var parsed={};try{parsed=JSON.parse(t);}catch(e){}
+        st.innerHTML='<span style="color:#e74c3c;">Error PUT '+r.status+': '+(parsed.message||t.substring(0,300))+'</span><br><small>URL: '+apiUrl+'<br>Branch: '+GH_BRANCH+'<br>Token starts: '+token.substring(0,8)+'…</small>';
       });
     }
   })
   .catch(function(e){
     document.getElementById('admBtnPush').disabled=false;
-    st.textContent='Error: '+e.message;st.style.color='#e74c3c';
+    st.innerHTML='<span style="color:#e74c3c;">Error: '+e.message+'</span><br><small>URL: '+apiUrl+'</small>';
   });
 }
 
