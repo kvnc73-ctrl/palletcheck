@@ -2525,25 +2525,35 @@ function admPushGitHub(){
   var headers={'Authorization':'token '+token,'Content-Type':'application/json','Accept':'application/vnd.github+json'};
 
   // First GET to get current SHA (needed for update)
+  st.textContent='⧗ Verificando repositorio…';
   fetch(apiUrl,{headers:headers})
-  .then(function(r){return r.ok?r.json():null;})
+  .then(function(r){
+    st.textContent='⧗ GET status: '+r.status+' — subiendo archivo…';
+    return r.ok?r.json():r.status===404?null:r.json().then(function(e){throw new Error('GET '+r.status+': '+(e.message||''));});
+  })
   .then(function(existing){
+    var content;
+    try{content=btoa(unescape(encodeURIComponent(admJsonBlob._jsonStr)));}
+    catch(e){throw new Error('btoa failed: '+e.message);}
     var body={
       message:'data update '+new Date().toLocaleString('en-US'),
-      content:btoa(unescape(encodeURIComponent(admJsonBlob._jsonStr))),
+      content:content,
       branch:GH_BRANCH
     };
-    if(existing&&existing.sha)body.sha=existing.sha;
+    if(existing&&existing.sha){body.sha=existing.sha;st.textContent='⧗ Actualizando archivo existente…';}
+    else{st.textContent='⧗ Creando archivo nuevo…';}
     return fetch(apiUrl,{method:'PUT',headers:headers,body:JSON.stringify(body)});
   })
   .then(function(r){
     document.getElementById('admBtnPush').disabled=false;
     if(r.ok||r.status===201){
       st.innerHTML='<span style="color:var(--emerald);">✔ data.json subido — todos verán los datos nuevos al refrescar.</span>';
-      // Update in-memory data immediately
       try{var d=JSON.parse(admJsonBlob._jsonStr);Object.assign(DB,d.DB||{});if(d.DOCK)Object.assign(DOCK_DB,d.DOCK);}catch(e){}
     }else{
-      r.text().then(function(t){st.textContent='Error '+r.status+': '+t;st.style.color='#e74c3c';});
+      r.text().then(function(t){
+        var msg='';try{msg=JSON.parse(t).message;}catch(e){msg=t.substring(0,200);}
+        st.textContent='Error PUT '+r.status+': '+msg;st.style.color='#e74c3c';
+      });
     }
   })
   .catch(function(e){
