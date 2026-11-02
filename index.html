@@ -1499,12 +1499,26 @@ function onBOLInput(){
   st.textContent='';
 }
 
-// Find load by SID# (direct) or by pallet barcode (scan)
+// Find load by SID# (direct), SO#, or pallet barcode (scan)
 function _findLoadByInput(v){
   var num=v.replace(/\D/g,'');
   // 1) Try direct SID# lookup in DOCK_DB keys
   if(DOCK_DB[num])return{type:'sid',load:DOCK_DB[num],sid:num};
-  // 2) Try finding pallet barcode in DB → get SO → find load
+  if(DOCK_DB[v])return{type:'sid',load:DOCK_DB[v],sid:v};
+  // 2) Try SO# lookup — check if v or num is a Sales Order in DB
+  if(DB[v]||DB[num]){
+    var soKey=DB[v]?v:num;
+    var dkeys=Object.keys(DOCK_DB);
+    for(var d=0;d<dkeys.length;d++){
+      var dld=DOCK_DB[dkeys[d]];
+      if(dld.sos&&dld.sos.indexOf(soKey)>=0){
+        return{type:'so',load:dld,sid:dkeys[d],so:soKey};
+      }
+    }
+    // SO exists in DB but no DOCK_DB load found
+    return{type:'pallet_no_load',so:soKey};
+  }
+  // 3) Try finding pallet barcode in DB → get SO → find load
   for(var so in DB){
     var pallets=DB[so];
     for(var p=0;p<pallets.length;p++){
@@ -1550,7 +1564,9 @@ function lookupBOL(){
   var destStr=(load.dest||'')+(load.destCity?' — '+load.destCity+(load.destState?', '+load.destState:''):'');
   var soList=load.sos.map(function(s){return 'SO '+s+(DB[s]?' ('+DB[s].length+' pal)':'');}).join('<br>');
   var fromPallet=found.type==='pallet'
-    ?'<div style="font-size:11px;color:#93c5fd;margin-bottom:8px;">Pallet <strong>'+found.palletId+'</strong> → SO <strong>'+found.so+'</strong></div>':'';
+    ?'<div style="font-size:11px;color:#93c5fd;margin-bottom:8px;">Pallet <strong>'+found.palletId+'</strong> → SO <strong>'+found.so+'</strong></div>'
+    :found.type==='so'
+    ?'<div style="font-size:11px;color:#93c5fd;margin-bottom:8px;">SO# <strong>'+found.so+'</strong></div>':'';
   document.getElementById('bolConfirmBody').innerHTML=
     fromPallet+
     '<div><span style="color:rgba(255,255,255,.5);font-size:11px;">SID#</span> <strong style="font-size:16px;letter-spacing:1px;">'+sidDisplay+'</strong></div>'+
