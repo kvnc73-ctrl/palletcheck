@@ -789,6 +789,43 @@ tbody td{padding:10px 16px;font-size:12px;color:var(--t1);}
           </div>
         </div>
 
+        <!-- Multi-stop popup -->
+        <div id="multiStopPopup" style="display:none;background:rgba(230,126,34,.1);border:1px solid rgba(230,126,34,.4);
+          border-radius:12px;padding:16px;margin-bottom:14px;">
+          <div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#e67e22;margin-bottom:10px;">🔀 Multi-Stop Load?</div>
+          <div style="font-size:13px;color:rgba(255,255,255,.8);margin-bottom:14px;">Is this trailer making more than one delivery stop?</div>
+          <div style="display:flex;gap:8px;">
+            <button onclick="multiStopAnswer(true)" style="flex:1;background:#e67e22;border:none;color:#fff;padding:12px;border-radius:8px;cursor:pointer;font-size:14px;font-weight:700;font-family:var(--sans);">
+              YES — Multi-Stop
+            </button>
+            <button onclick="multiStopAnswer(false)" style="flex:1;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.8);padding:12px;border-radius:8px;cursor:pointer;font-size:14px;font-weight:700;font-family:var(--sans);">
+              NO — Single Stop
+            </button>
+          </div>
+        </div>
+
+        <!-- BOL scan modal for multi-stop -->
+        <div id="bolScanModal" style="display:none;background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.3);
+          border-radius:12px;padding:16px;margin-bottom:14px;">
+          <div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#60a5fa;margin-bottom:10px;">📄 Scan BOL Barcode</div>
+          <div style="font-size:12px;color:rgba(255,255,255,.5);margin-bottom:10px;">Scan or type the BOL number from the Bill of Lading</div>
+          <input id="bolScanInput" type="text" inputmode="text" autocomplete="off"
+            placeholder="Scan BOL barcode…"
+            style="width:100%;box-sizing:border-box;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.2);border-radius:8px;padding:12px;color:#fff;font-size:16px;font-family:var(--sans);margin-bottom:12px;"
+            onkeydown="if(event.key==='Enter'){bolScanConfirmBOL();}" />
+          <div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:12px;">Select trailer position for this BOL stop:</div>
+          <div style="display:flex;gap:8px;margin-bottom:14px;">
+            <button onclick="bolSetPosition('TAIL')" id="bolPosTAIL" style="flex:1;background:rgba(255,255,255,.07);border:2px solid rgba(255,255,255,.15);color:rgba(255,255,255,.7);padding:10px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:700;font-family:var(--sans);">🔵 TAIL</button>
+            <button onclick="bolSetPosition('MIDDLE')" id="bolPosMIDDLE" style="flex:1;background:rgba(255,255,255,.07);border:2px solid rgba(255,255,255,.15);color:rgba(255,255,255,.7);padding:10px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:700;font-family:var(--sans);">🟡 MIDDLE</button>
+            <button onclick="bolSetPosition('NOSE')" id="bolPosNOSE" style="flex:1;background:rgba(255,255,255,.07);border:2px solid rgba(255,255,255,.15);color:rgba(255,255,255,.7);padding:10px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:700;font-family:var(--sans);">🔴 NOSE</button>
+          </div>
+          <div id="bolScanList" style="margin-bottom:12px;font-size:12px;color:rgba(255,255,255,.6);min-height:20px;"></div>
+          <div style="display:flex;gap:8px;">
+            <button onclick="bolScanConfirmBOL()" style="flex:1;background:#3b82f6;border:none;color:#fff;padding:10px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:700;font-family:var(--sans);">➕ Add BOL Stop</button>
+            <button onclick="bolScanDone()" style="flex:1;background:rgba(16,185,129,.2);border:1px solid rgba(16,185,129,.4);color:#34d399;padding:10px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:700;font-family:var(--sans);">✓ Done — Start Loading</button>
+          </div>
+        </div>
+
         <!-- Success banner (after confirming) -->
         <div id="bolResult" style="display:none;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.2);
           border-radius:10px;padding:12px 14px;margin-bottom:14px;">
@@ -852,22 +889,10 @@ tbody td{padding:10px 16px;font-size:12px;color:var(--t1);}
     </div>
   </div>
 
-  <div class="setup-card">
-    <div class="setup-card-title">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
-      Multi-Stop Trailer
-    </div>
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:16px">
-      <div>
-        <div style="color:#fff;font-size:13px;font-weight:600;margin-bottom:4px">Multiple customers on this trailer?</div>
-        <div style="color:rgba(255,255,255,.4);font-size:11px">Turn ON if this trailer carries loads for more than one customer (e.g. Walmart + Kroger). Each load is confirmed separately but tied to the same trailer.</div>
-      </div>
-      <div id="multiStopToggle" onclick="toggleMultiStop()" style="cursor:pointer;flex-shrink:0;width:52px;height:28px;border-radius:14px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);position:relative;transition:background .2s">
-        <div id="multiStopKnob" style="position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;opacity:.4;transition:left .2s,opacity .2s"></div>
-      </div>
-    </div>
-    <div id="multiStopLabel" style="margin-top:10px;font-size:10px;letter-spacing:1px;color:rgba(255,255,255,.3);text-transform:uppercase">Single load · Standard confirm</div>
-  </div>
+  <!-- multiStopToggle kept hidden for JS refs; flow is now handled via popup after BOL confirm -->
+  <div id="multiStopToggle" style="display:none;"></div>
+  <div id="multiStopKnob" style="display:none;"></div>
+  <div id="multiStopLabel" style="display:none;"></div>
 
   <div class="cta-wrap">
     <div class="lock-line">
@@ -1069,7 +1094,7 @@ tbody td{padding:10px 16px;font-size:12px;color:var(--t1);}
       <thead><tr>
         <th>#</th><th>Date</th><th>Time</th><th>Door</th>
         <th>Trailer</th><th>Sales&nbsp;Order</th><th>Load</th><th>Loader</th>
-        <th>Shift</th><th>Min</th><th>Pallets</th><th>Wrong</th><th>Result</th><th>Notes</th>
+        <th>Shift</th><th>Min</th><th>Pallets</th><th>Wrong</th><th>Result</th><th>Notes</th><th>BOL Stops</th>
       </tr></thead>
       <tbody id="mTbody"></tbody>
     </table>
@@ -1332,12 +1357,15 @@ function pushMaster(rec){
   }
   m.push({
     id:m.length+1,savedAt:new Date().toISOString(),
+    sid:rec.sid||'',
     door:rec.door||'—',trailer:rec.trailer,
     order:rec.order,carga:rec.carga||'',
     loader:rec.loader,shift:rec.shift,
     startTime:s(rec.startTime),endTime:s(rec.endTime),
     loaded:rec.loaded,total:rec.total,wrongScans:rec.wrongScans,result:rec.result,
     driverNotes:driverNotes.join(' | ')||'',
+    multiStop:rec.multiStop||false,
+    bolStops:rec.bolStops||[],
     pallets:rec.pallets.map(function(p){
       return{id:p.id,sku:p.sku,qty:p.qty,status:p.status,scannedAt:s(p.scannedAt),
              driverOverride:p._driverOverride?true:false,
@@ -1728,6 +1756,91 @@ function lookupBOL(){
 
 function confirmLoadBOL(){
   if(!_pendingLoad)return;
+  // Show multi-stop popup before proceeding
+  document.getElementById('bolConfirm').style.display='none';
+  document.getElementById('multiStopPopup').style.display='block';
+}
+
+function multiStopAnswer(isMulti){
+  document.getElementById('multiStopPopup').style.display='none';
+  if(isMulti){
+    // Enable multi-stop mode globally
+    if(!multiStop){multiStop=true;multiStopLoadNum=1;_bolScans=[];}
+    // Show BOL scan modal
+    _bolScans=_bolScans||[];
+    _bolSelectedPosition=null;
+    document.getElementById('bolScanInput').value='';
+    document.getElementById('bolScanList').innerHTML='';
+    bolRenderScanList();
+    document.getElementById('bolScanModal').style.display='block';
+    setTimeout(function(){document.getElementById('bolScanInput').focus();},100);
+    // Update toggle UI to reflect multi-stop ON
+    var tog=document.getElementById('multiStopToggle');
+    var knob=document.getElementById('multiStopKnob');
+    var lbl=document.getElementById('multiStopLabel');
+    if(tog){tog.style.background='#f59e0b';if(knob){knob.style.left='29px';knob.style.opacity='1';}}
+    if(lbl){lbl.textContent='Multi-stop · BOL verified';}
+  } else {
+    _bolScans=[];
+    _finalizeLoadBOL();
+  }
+}
+
+var _bolScans=[], _bolSelectedPosition=null;
+
+function bolSetPosition(pos){
+  _bolSelectedPosition=pos;
+  ['TAIL','MIDDLE','NOSE'].forEach(function(p){
+    var btn=document.getElementById('bolPos'+p);
+    if(!btn)return;
+    btn.style.background=p===pos?'rgba(59,130,246,.3)':'rgba(255,255,255,.07)';
+    btn.style.borderColor=p===pos?'#3b82f6':'rgba(255,255,255,.15)';
+    btn.style.color=p===pos?'#fff':'rgba(255,255,255,.7)';
+  });
+}
+
+function bolScanConfirmBOL(){
+  var raw=document.getElementById('bolScanInput').value.trim();
+  if(!raw){toast('Scan or type the BOL number','twarn');return;}
+  if(!_bolSelectedPosition){toast('Select a trailer position: TAIL, MIDDLE or NOSE','twarn');return;}
+  // Strip GS1 prefix like (402) or similar application identifiers
+  var bolNum=raw.replace(/^\(?\d{3}\)?/,'').trim();
+  if(!bolNum)bolNum=raw;
+  // Check duplicate
+  if(_bolScans.find(function(s){return s.bol===bolNum;})){toast('BOL '+bolNum+' already added','twarn');return;}
+  _bolScans.push({bol:bolNum,position:_bolSelectedPosition,scannedAt:new Date().toISOString()});
+  document.getElementById('bolScanInput').value='';
+  _bolSelectedPosition=null;
+  bolSetPosition(null);
+  bolRenderScanList();
+  toast('BOL '+bolNum+' added — '+(_bolScans.length)+' stop'+((_bolScans.length)>1?'s':''),'tinfo');
+  document.getElementById('bolScanInput').focus();
+}
+
+function bolRenderScanList(){
+  var el=document.getElementById('bolScanList');
+  if(!el)return;
+  if(!_bolScans||!_bolScans.length){el.innerHTML='<span style="color:rgba(255,255,255,.3);">No BOL stops added yet</span>';return;}
+  el.innerHTML=_bolScans.map(function(s,i){
+    var posColor=s.position==='TAIL'?'#60a5fa':s.position==='NOSE'?'#f87171':'#fbbf24';
+    return '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.07);">'+
+      '<span style="color:'+posColor+';font-weight:700;font-size:12px;width:52px;">'+s.position+'</span>'+
+      '<span style="flex:1;font-family:monospace;font-size:13px;">BOL# '+s.bol+'</span>'+
+      '<span onclick="_bolScans.splice('+i+',1);bolRenderScanList();" style="cursor:pointer;color:rgba(220,38,38,.7);font-size:16px;padding:0 4px;">✕</span>'+
+    '</div>';
+  }).join('');
+}
+
+function bolScanDone(){
+  if(!_bolScans||!_bolScans.length){
+    if(!confirm('No BOL stops scanned. Continue without recording BOL info?'))return;
+  }
+  document.getElementById('bolScanModal').style.display='none';
+  _finalizeLoadBOL();
+}
+
+function _finalizeLoadBOL(){
+  if(!_pendingLoad)return;
   var load=_pendingLoad.load;
   var sid=_pendingLoad.sid;
   // Fill door field if available
@@ -1743,14 +1856,15 @@ function confirmLoadBOL(){
     if(inp){inp.value=so;onSOInput(idx);}
   });
   // Show success banner
-  document.getElementById('bolConfirm').style.display='none';
   var totalPal=0;
   load.sos.forEach(function(s){if(DB[s])totalPal+=DB[s].length;});
   var destStr=(load.dest||'')+(load.destCity?' — '+load.destCity+(load.destState?', '+load.destState:''):'');
+  var bolInfo=(_bolScans&&_bolScans.length)
+    ?' · <span style="color:#f59e0b;">🔀 '+_bolScans.length+' BOL stop'+((_bolScans.length)>1?'s':'')+'</span>':'';
   document.getElementById('bolResultBody').innerHTML=
     '<strong>SID# '+sid+'</strong> — '+destStr+'<br>'+
     'Carrier: '+load.carrier+(load.door?' · Door: <strong>'+load.door+'</strong>':'')+' · '+
-    load.sos.length+' SOs · '+(load.pallets||totalPal)+' pallets';
+    load.sos.length+' SOs · '+(load.pallets||totalPal)+' pallets'+bolInfo;
   document.getElementById('bolResult').style.display='block';
   document.getElementById('bolStatus').innerHTML='<span style="color:#34d399;">✔ '+load.sos.length+' Sales Orders loaded automatically</span>';
   _pendingLoad=null;
@@ -1979,7 +2093,17 @@ function renderManifest(){
         var skuDetails=rows2.map(function(p){return '<span style="display:block;font-size:9px;color:rgba(255,255,255,.55);line-height:1.5;">'+p.sku+' &nbsp;·&nbsp; '+p.qty+'u</span>';}).join('');
         skuLine=mixTag+rows2.reduce(function(a,p){return a+p.qty;},0)+'u total'+skuDetails;
       }else{
-        skuLine='<span style="font-size:10px;color:rgba(255,255,255,.7);">'+rows2[0].sku+'</span> <span style="color:rgba(255,255,255,.4);font-size:9px;">· '+rows2[0].qty+'u</span>';
+        var skuVal=rows2[0].sku||'';
+        // If SKU missing, try to look it up in DB by pallet ID
+        if(!skuVal){
+          var soKeys=Object.keys(DB);
+          for(var si=0;si<soKeys.length;si++){
+            var found=DB[soKeys[si]].find(function(p){return p.id===pid;});
+            if(found&&found.sku){skuVal=found.sku;break;}
+          }
+        }
+        if(!skuVal)skuVal='—';
+        skuLine='<span style="font-size:10px;color:rgba(255,255,255,.7);">'+skuVal+'</span> <span style="color:rgba(255,255,255,.4);font-size:9px;">· '+rows2[0].qty+'u</span>';
       }
       var checkIcon=ld
         ?''  // green checkmark handled by .loaded class
@@ -2090,8 +2214,10 @@ function doScan(val){
       var ownerDest=getSODest(ownerSO);
       detail='⚠️ Pallet belongs to SO '+ownerSO+(ownerDest?' — Destination: '+ownerDest:'')+'. Not part of this load.';
     } else {
-      detail='Barcode not found in any known order.';
+      detail='Not found in system — may be a new pallet not yet updated.';
     }
+    // Store the unknown val so the Add button can reference it
+    G._lastUnknownId=val;
     flashBox(false);beep(3);
   } else if(matches.every(function(i){return G.pallets[i].status==='LOADED';})){
     cls='dup';icon='&#x26A0;';title='Duplicate';detail='Pallet '+val+' already scanned this session.';
@@ -2120,13 +2246,49 @@ function doScan(val){
   // Result
   var rc=document.getElementById('result');
   rc.className='result '+cls;
-  rc.innerHTML='<div class="result-icon">'+icon+'</div><div><div class="result-title">'+title+'</div><div class="result-detail"><span class="result-pid">'+val+'</span> \u2014 '+detail+'</div></div>';
+  rc.innerHTML='<div class="result-icon">'+icon+'</div><div><div class="result-title">'+title+'</div><div class="result-detail"><span class="result-pid">'+val+'</span> \u2014 '+detail+'</div></div>'
+    +(cls==='bad'&&!ownerSO?'<div style="margin-top:10px;"><button onclick="quickAddUnknownPallet(\''+val.replace(/'/g,"\\'")+'\')" style="background:#e67e22;color:#fff;border:none;padding:10px 22px;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;letter-spacing:.5px;">\u2795 Add to Load</button><div style="font-size:11px;color:rgba(255,255,255,.55);margin-top:5px;">Physical BOL updated \u2014 add with note</div></div>':'');
   addChip(val,cls);updateKPIs();updateFooter();
   if(cls==='ok'&&G.pallets.every(function(p){return p.status==='LOADED';})){
     renderQueue(); // refresh queue chips when all done
   }
 }
 
+
+// ── ADD UNKNOWN PALLET (physical BOL updated, app CSV stale) ──
+function quickAddUnknownPallet(val){
+  if(!G||!G.pallets){toast('No active load session.','twarn');return;}
+  // Check if already added this session
+  var already=G.pallets.find(function(p){return p.id.toUpperCase()===val.toUpperCase()&&p._driverOverride;});
+  if(already){toast('Already added to this load.','tinfo');return;}
+  var newPal={
+    id:val,
+    sku:'NOT-IN-SYSTEM',
+    qty:1,
+    lot:'',
+    so:G.curSO||'',
+    status:'LOADED',
+    scannedAt:new Date(),
+    _driverOverride:true,
+    _driverLabel:'Loader verified — not in system at time of loading'
+  };
+  G.pallets.push(newPal);
+  // Log the override
+  var entry={time:new Date(),id:val,result:'OVERRIDE',sku:'NOT-IN-SYSTEM',so:G.curSO||''};
+  G.scanLog.push(entry);G.allLog.push(entry);actLog.unshift(entry);if(actLog.length>500)actLog.pop();
+  // Update UI
+  var rc=document.getElementById('result');
+  if(rc){
+    rc.className='result ok';
+    rc.innerHTML='<div class="result-icon">&#x2714;</div><div><div class="result-title">Added to Load</div><div class="result-detail"><span class="result-pid">'+val+'</span> — Loader verified — physical BOL. Not in system at time of scan.</div></div>';
+  }
+  addChip(val,'ok');
+  if(typeof updateKPIs==='function')updateKPIs();
+  if(typeof updateFooter==='function')updateFooter();
+  if(typeof renderManifest==='function')renderManifest();
+  flashBox(true);
+  toast('Pallet '+val+' added to load — override noted.','tinfo');
+}
 
 // ── FINISH TRAILER (multi-stop) ──
 function finishTrailer(){
@@ -2225,12 +2387,15 @@ function doConfirm(){
   var miss2=G.pallets.filter(function(p){return p.status==='PENDING';}).length;
   var res=ld===G.pallets.length?'COMPLETE':'PARTIAL';
   var mid=pushMaster({
+    sid:G.sid||'',
     door:G.door,trailer:G.trailer,order:G.curSO,
     carga:G.carga,loader:G.loader,shift:G.shift,
     startTime:G.startTime,endTime:new Date(),
     loaded:ld,total:G.pallets.length,wrongScans:G.wrongScans,
     result:res,
     confirmLog:G.confirmLog||[],
+    multiStop:multiStop||false,
+    bolStops:(_bolScans&&_bolScans.length)?_bolScans.slice():[],
     pallets:G.pallets.slice(),scanLog:G.allLog.slice()
   });
   // \u2500\u2500 Auto-save to SharePoint via Power Automate \u2500\u2500
@@ -2268,7 +2433,13 @@ function doConfirm(){
       result:snap.result,
       driverNotes:driverNotes.join(' | ')||'',
       driverOverridesCount:driverOverrides.length,
-      driverOverrides:driverOverrides
+      driverOverrides:driverOverrides,
+      multiStop:multiStop||false,
+      bolStops:(snap.bolStops&&snap.bolStops.length)?snap.bolStops:[],
+      bolStopsCount:(snap.bolStops&&snap.bolStops.length)||0,
+      bolStopsSummary:(snap.bolStops&&snap.bolStops.length)
+        ?snap.bolStops.map(function(s){return s.position+': '+s.bol;}).join(' | ')
+        :''
     };
     fetch(POWER_AUTOMATE_URL,{
       method:'POST',
@@ -2280,7 +2451,8 @@ function doConfirm(){
     }).catch(function(){toast('SharePoint offline \u2014 local record kept','twarn');});
   })({startTime:G.startTime,door:G.door,trailer:G.trailer,sid:G.sid||'',order:G.curSO,carga:G.carga,
       loader:G.loader,shift:G.shift,total:G.pallets.length,loaded:ld,result:res,
-      wrongScans:G.wrongScans,confirmLog:G.confirmLog||[],pallets:G.pallets.slice()});
+      wrongScans:G.wrongScans,confirmLog:G.confirmLog||[],pallets:G.pallets.slice(),
+      bolStops:(_bolScans&&_bolScans.length)?_bolScans.slice():[]});
   toast('\u2713 Load '+mid+' saved \u2014 '+getMaster().length+' total records','tok');
   G=null;
 
@@ -2343,6 +2515,15 @@ function renderMaster(){
     var noteCell=notes
       ?'<td style="font-size:9px;color:rgba(245,158,11,.8);max-width:180px;white-space:normal;line-height:1.4;" title="'+notes.replace(/"/g,"'")+'">'+notes+'</td>'
       :'<td style="color:var(--t3);font-size:10px;">—</td>';
+    var bolStops=r.bolStops||[];
+    var posColor={TAIL:'#60a5fa',NOSE:'#f87171',MIDDLE:'#fbbf24'};
+    var bolCell=bolStops.length
+      ?'<td style="font-size:9px;white-space:normal;line-height:1.6;min-width:120px;">'+
+        bolStops.map(function(s){
+          var c=posColor[s.position]||'#aaa';
+          return '<span style="color:'+c+';font-weight:700;">'+s.position+'</span> <span style="color:rgba(255,255,255,.6);">'+s.bol+'</span>';
+        }).join('<br>')+'</td>'
+      :'<td style="color:var(--t3);font-size:10px;">—</td>';
     return '<tr>'
       +'<td class="td-m" style="color:var(--t3)">'+r.id+'</td>'
       +'<td class="td-m">'+dt.toLocaleDateString()+'</td>'
@@ -2358,6 +2539,7 @@ function renderMaster(){
       +'<td class="td-m" style="color:'+(r.wrongScans?'var(--crimson)':'var(--t3)')+'">'+r.wrongScans+'</td>'
       +'<td class="'+(r.result==='COMPLETE'?'td-ok':'td-part')+'">'+r.result+'</td>'
       +noteCell
+      +bolCell
       +'</tr>';
   }).join('');
 }
@@ -2367,19 +2549,22 @@ function exportMaster(){
   var m=getMaster();if(!m.length){toast('No records to export','twarn');return;}
   var wb=XLSX.utils.book_new();
   // Sheet 1 \u2014 Load Summary
-  var h=['#','Date','Time','Door','Trailer','Sales Order','Load','Loader','Shift','Duration (min)','Scanned','Total Pallets','Missing','Wrong Scans','Result','Notes'];
+  var h=['#','Date','Time','Door','SID','Trailer','Sales Order','Load','Loader','Shift','Duration (min)','Scanned','Total Pallets','Missing','Wrong Scans','Result','Notes','BOL Stops'];
   var rows=m.map(function(r){
     var dt=new Date(r.startTime);
     var dur=Math.round((new Date(r.endTime)-dt)/60000);
+    var bolStr=(r.bolStops&&r.bolStops.length)
+      ?r.bolStops.map(function(s){return s.position+': '+s.bol;}).join(' | ')
+      :'';
     return[r.id,
       dt.toLocaleDateString('en-US'),
       dt.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:false}),
-      r.door||'',r.trailer,r.order,r.carga||'',r.loader,r.shift,
-      dur,r.loaded,r.total,(r.total-r.loaded),r.wrongScans,r.result,r.driverNotes||''];
+      r.door||'',r.sid||'',r.trailer,r.order,r.carga||'',r.loader,r.shift,
+      dur,r.loaded,r.total,(r.total-r.loaded),r.wrongScans,r.result,r.driverNotes||'',bolStr];
   });
   var ws=XLSX.utils.aoa_to_sheet([h].concat(rows));
   // Column widths
-  ws['!cols']=[{wch:4},{wch:12},{wch:8},{wch:6},{wch:10},{wch:10},{wch:8},{wch:10},{wch:6},{wch:6},{wch:8},{wch:8},{wch:8},{wch:8},{wch:10},{wch:40}];
+  ws['!cols']=[{wch:4},{wch:12},{wch:8},{wch:6},{wch:12},{wch:10},{wch:12},{wch:8},{wch:10},{wch:6},{wch:6},{wch:8},{wch:8},{wch:8},{wch:8},{wch:10},{wch:40},{wch:35}];
   XLSX.utils.book_append_sheet(wb,ws,'Load Summary');
 
   // Sheet 2 \u2014 All Pallets (including driver overrides)
@@ -2430,7 +2615,24 @@ function exportMaster(){
     XLSX.utils.book_append_sheet(wb,ws4ov,'Driver Overrides');
   }
 
-  // Sheet 5 \u2014 Scan Log
+  // Sheet 5 \u2014 BOL Multi-Stop Records
+  var h5bol=['Load#','Date','Time','Door','Trailer','SID','Loader','BOL #','Stop Position','Scanned At'];
+  var r5bol=[];
+  m.forEach(function(r){
+    var dt=new Date(r.startTime);
+    var d=dt.toLocaleDateString('en-US');
+    var t=dt.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:false});
+    (r.bolStops||[]).forEach(function(s){
+      r5bol.push([r.id,d,t,r.door||'',r.trailer,r.sid||'',r.loader,s.bol,s.position,s.scannedAt?new Date(s.scannedAt).toLocaleString('en-US'):'']);
+    });
+  });
+  if(r5bol.length){
+    var ws5bol=XLSX.utils.aoa_to_sheet([h5bol].concat(r5bol));
+    ws5bol['!cols']=[{wch:5},{wch:12},{wch:8},{wch:6},{wch:10},{wch:12},{wch:10},{wch:14},{wch:10},{wch:20}];
+    XLSX.utils.book_append_sheet(wb,ws5bol,'BOL Stops');
+  }
+
+  // Sheet 6 \u2014 Scan Log
   var h5=['Load#','Date','Door','Trailer','SO','Load','Loader','Time','Pallet ID','Result'];
   var r5=[];
   m.forEach(function(r){
@@ -2640,6 +2842,7 @@ function admParseDockActivity(rows){
   var iDest=hi(['Destination Name']), iDestCity=hi(['Destination City']);
   var iDestState=hi(['Destination State']), iDoor=hi(['Driver Name']);
   var iComments=hi(['Comments']), iRef=hi(['Shipment Reference']);
+  var iStops=hi(['# of Stop','Stops','Num Stop','Number of Stop']);
 
   for(var r2=hRow+1;r2<rows.length;r2++){
     var row=rows[r2];
@@ -2650,6 +2853,7 @@ function admParseDockActivity(rows){
     var refs=refRaw?refRaw.split(/[,;]+/).map(function(s){return s.trim().replace(/^S/i,'');}).filter(function(s){return s&&!isNaN(Number(s));}).map(function(s){return String(Number(s));}):[]; // normalize: strip leading zeros via Number()
     if(!dock[loadId]){
       // First row for this load — create entry
+      var numStops=iStops>=0?Math.round(parseFloat(row[iStops])||1):1;
       dock[loadId]={
         loadId:loadId,
         confirm:String(row[iConfirm]||'').trim().replace(/\.0$/,''),
@@ -2660,7 +2864,8 @@ function admParseDockActivity(rows){
         destCity:String(row[iDestCity]||'').trim(),
         destState:String(row[iDestState]||'').trim(),
         door:String(row[iDoor]||'').trim(),
-        comments:String(row[iComments]||'').replace(/\n/g,' ').trim()
+        comments:String(row[iComments]||'').replace(/\n/g,' ').trim(),
+        numStops:numStops
       };
     } else {
       // Subsequent row for same load — add any new SOs not already listed
@@ -2887,21 +3092,13 @@ function ovAddIDConfirm(){
   ovAddIDSubmit(null); // null = read from inputs
 }
 
-// After adding a driver pallet, confirm load and return to setup
+// After adding a driver pallet, stay in scan so user can keep adding/scanning
 function ovConfirmLoadAndFinish(){
-  var expected=G&&G.pallets?G.pallets.length:0;
-  var scannedCount=G&&G.pallets?G.pallets.filter(function(p){return p.status==='LOADED';}).length:0;
-  if(scannedCount===expected){
-    // All accounted for — confirm and go home
-    _logConfirm('MATCH_AFTER_ADD',scannedCount,expected);
-    document.getElementById('ovConfirmOKSub').textContent=
-      scannedCount+' pallets confirmed including the added pallet. Returning to Load...';
-    document.getElementById('ovConfirmOKModal').classList.add('active');
-    setTimeout(function(){ovModalClose('ovConfirmOKModal');goView('setup');},2200);
-  } else {
-    // Still a mismatch — show the normal confirm flow
-    ovConfirmLoad();
-  }
+  // Just update KPIs and stay in scan view — user finishes manually
+  if(typeof updateKPIs==='function')updateKPIs();
+  if(typeof renderManifest==='function')renderManifest();
+  if(typeof syncFinishBtn==='function')syncFinishBtn();
+  toast('Pallet added — keep scanning or press Finish when done.','tinfo');
 }
 
 // --- Confirm Load ---
