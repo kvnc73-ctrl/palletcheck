@@ -2692,7 +2692,7 @@ function admBuildDB(sohWb){
   // accumulate by SO → ToPallet (mix pallets = same pallet ID)
   var soMap={};
   sohRows.forEach(function(r){
-    var so=String(r[COL_SO]||'').trim();
+    var so=String(r[COL_SO]||'').trim().replace(/^0+/,'');
     var pal=String(r[COL_PAL]||'').trim();
     if(!so||!pal||so==='Sales Order'||pal==='To Pallet')return;
     var qty=0;
