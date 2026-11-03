@@ -1479,7 +1479,7 @@ function pickCarga(c,el){
 }
 
 // ── SO FIELD ──
-document.getElementById('inpSO').addEventListener('input',function(){
+(function(){var _inpSO=document.getElementById('inpSO');if(!_inpSO)return;_inpSO.addEventListener('input',function(){
   var so=this.value.trim(),hint=document.getElementById('soHint'),ls=document.getElementById('linkedSection');
   var oi=document.getElementById('soOrderInfo');
   if(!so){hint.style.display='none';ls.style.display='none';oi.style.display='none';return;}
@@ -1495,7 +1495,7 @@ document.getElementById('inpSO').addEventListener('input',function(){
     hint.className='so-hint bad';hint.innerHTML='&#x2717; Sales Order "'+so+'" not found in database';
     hint.style.display='block';ls.style.display='none';oi.style.display='none';
   } else{hint.style.display='none';ls.style.display='none';oi.style.display='none';}
-});
+});})();
 function showOrderInfo(so){
   var oi=document.getElementById('soOrderInfo');
   var link=LINKS[so];
@@ -1697,7 +1697,12 @@ function lookupBOL(){
     ?'<div style="font-size:11px;color:#93c5fd;margin-bottom:8px;">Pallet <strong>'+found.palletId+'</strong> → SO <strong>'+found.so+'</strong></div>'
     :found.type==='so'
     ?'<div style="font-size:11px;color:#93c5fd;margin-bottom:8px;">SO# <strong>'+found.so+'</strong></div>':'';
-  var palDisplay=load.pallets||totalPal||'—';
+  // Use picked count (Sales Order History) as primary; show BOL count if different
+  var pickedPal=totalPal||0;
+  var bolPal=load.pallets||0;
+  var palDisplay=pickedPal||bolPal||'—';
+  var palSubNote=(pickedPal&&bolPal&&pickedPal!==bolPal)
+    ?'<div style="font-size:10px;color:rgba(255,200,100,.7);margin-top:2px;">BOL: '+bolPal+'</div>':'';
   var soCount=load.sos.length;
   document.getElementById('bolConfirmBody').innerHTML=
     fromPallet+
@@ -1705,6 +1710,7 @@ function lookupBOL(){
       '<div style="flex:1;background:rgba(255,255,255,.07);border-radius:8px;padding:10px 14px;text-align:center;">'+
         '<div style="font-size:10px;color:rgba(255,255,255,.4);letter-spacing:.1em;text-transform:uppercase;margin-bottom:2px;">Pallets</div>'+
         '<div style="font-size:32px;font-weight:800;color:#fff;line-height:1;">'+palDisplay+'</div>'+
+        palSubNote+
       '</div>'+
       '<div style="flex:1;background:rgba(255,255,255,.07);border-radius:8px;padding:10px 14px;text-align:center;">'+
         '<div style="font-size:10px;color:rgba(255,255,255,.4);letter-spacing:.1em;text-transform:uppercase;margin-bottom:2px;">Sales Orders</div>'+
@@ -2545,6 +2551,9 @@ function admProcess(){
       var built=admBuildDB(sohWb);
       built.DOCK=admParseDockActivity(daRows);
       DOCK_DB=built.DOCK;
+      // Also refresh global DB so SO/pallet searches use the newly processed data
+      Object.keys(DB).forEach(function(k){delete DB[k];});
+      Object.assign(DB,built.DB);
       var dockCount=Object.keys(built.DOCK).length;
       var dockLine='<br>✓ BOL loads (Dock Activity): <strong>'+dockCount+'</strong>';
       var _js=JSON.stringify(built);admJsonBlob=new Blob([_js],{type:'application/json'});admJsonBlob._jsonStr=_js;
@@ -2636,15 +2645,16 @@ function admParseDockActivity(rows){
     var row=rows[r2];
     var loadId=String(row[iLoad]||'').trim().replace(/\.0$/,'');
     if(!loadId||loadId===''||isNaN(Number(loadId)))continue;
-    // Collect SO from Shipment Reference (strip leading S if present)
-    var ref=String(row[iRef]||'').trim().replace(/^S/i,'');
+    // Collect SOs from Shipment Reference — may be comma-separated list e.g. "608911, 609653, 609882"
+    var refRaw=String(row[iRef]||'').trim();
+    var refs=refRaw?refRaw.split(/[,;]+/).map(function(s){return s.trim().replace(/^S/i,'');}).filter(function(s){return s&&!isNaN(Number(s));}).map(function(s){return String(Number(s));}):[]; // normalize: strip leading zeros via Number()
     if(!dock[loadId]){
       // First row for this load — create entry
       dock[loadId]={
         loadId:loadId,
         confirm:String(row[iConfirm]||'').trim().replace(/\.0$/,''),
         carrier:String(row[iCarrier]||'').trim(),
-        sos:ref?[ref]:[],
+        sos:refs.slice(),
         pallets:0,
         dest:String(row[iDest]||'').trim(),
         destCity:String(row[iDestCity]||'').trim(),
@@ -2653,10 +2663,8 @@ function admParseDockActivity(rows){
         comments:String(row[iComments]||'').replace(/\n/g,' ').trim()
       };
     } else {
-      // Subsequent row for same load — just add new SO if not already there
-      if(ref&&dock[loadId].sos.indexOf(ref)<0){
-        dock[loadId].sos.push(ref);
-      }
+      // Subsequent row for same load — add any new SOs not already listed
+      refs.forEach(function(r){if(r&&dock[loadId].sos.indexOf(r)<0)dock[loadId].sos.push(r);});
     }
     // Accumulate pallets across all rows
     dock[loadId].pallets+=Math.round(parseFloat(row[iPal])||0);
