@@ -260,39 +260,92 @@ nav{
 }
 
 /* ── MOBILE / SCANNER layout ── */
-@media(max-width:600px){
+@media(max-width:700px){
   #vScan{flex-direction:column;}
 
-  /* Sidebar — collapses to a slim progress bar; tap to expand */
+  /* Sidebar — collapses to a tap-to-expand manifest drawer */
   .sidebar{
-    width:100%;border-right:none;border-bottom:1px solid rgba(255,255,255,.08);
-    max-height:48px;overflow:hidden;transition:max-height .3s ease;flex-shrink:0;
+    width:100%;border-right:none;border-bottom:1px solid rgba(255,255,255,.1);
+    max-height:52px;overflow:hidden;transition:max-height .35s cubic-bezier(.4,0,.2,1);flex-shrink:0;
   }
-  .sidebar.mob-open{max-height:50vh;}
+  .sidebar.mob-open{max-height:55vh;}
   .sb-head{
-    cursor:pointer;padding:10px 16px;
+    cursor:pointer;padding:12px 16px;
     display:flex;flex-direction:row;align-items:center;gap:10px;
   }
   .sb-head-row{margin-bottom:0;flex:1;display:flex;align-items:center;gap:10px;}
   .sb-head::after{
-    content:'▼';font-size:10px;color:rgba(255,255,255,.35);
-    flex-shrink:0;transition:transform .25s;
+    content:'▼';font-size:11px;color:rgba(255,255,255,.4);
+    flex-shrink:0;transition:transform .3s;
   }
   .sidebar.mob-open .sb-head::after{transform:rotate(180deg);}
+  /* Bigger text in manifest for mobile */
+  .prow-id{font-size:12px;}
+  .prow-sku{font-size:11px;color:rgba(255,255,255,.4);}
+  .prow{padding:11px 16px;}
+  .sb-title{font-size:18px;}
+  .sb-progress{font-size:12px;}
 
-  /* Scan panel fills remaining space; footer sticks to bottom */
+  /* Scan panel fills remaining space */
   .scan-panel{flex:1;display:flex;flex-direction:column;min-height:0;overflow:hidden;}
   .scan-main{flex:1;overflow-y:auto;}
-  .footer{position:sticky;bottom:0;z-index:10;padding:10px 16px;}
 
-  /* KPIs 2-column on mobile */
-  .kpi-bar{grid-template-columns:repeat(2,1fr);}
-  .kpi{padding:10px 14px;}
-  .kpi-val{font-size:22px;}
+  /* KPI bar — horizontal scroll strip */
+  .kpi-bar{
+    display:flex;overflow-x:auto;overflow-y:hidden;
+    scrollbar-width:none;-ms-overflow-style:none;
+    grid-template-columns:unset;
+    border-bottom:1px solid rgba(255,255,255,.08);flex-shrink:0;
+  }
+  .kpi-bar::-webkit-scrollbar{display:none;}
+  .kpi{
+    flex:0 0 auto;min-width:90px;padding:10px 16px;
+    border-right:1px solid rgba(255,255,255,.06);
+  }
+  .kpi-val{font-size:26px;}
+  .kpi-lbl{font-size:9px;}
+  .kpi-sub{font-size:9px;}
+  /* Info strip wraps nicely */
+  .load-info-strip{padding:5px 14px;gap:0;overflow-x:auto;flex-wrap:nowrap;scrollbar-width:none;}
+  .load-info-strip::-webkit-scrollbar{display:none;}
+  .li-chip{flex-shrink:0;}
 
-  /* CONFIRM LOAD button full-width on mobile */
-  .btn-confirm{width:100%;justify-content:center;padding:12px 16px;font-size:15px;}
-  .footer .pct-num,.footer .pbar,.footer svg{display:none;}
+  /* Actions — move from kpi-bar column to bottom action bar */
+  .kpi-actions{display:none !important;}
+  .mob-action-bar{
+    display:flex !important;
+    position:sticky;bottom:0;z-index:20;
+    background:var(--navy2);border-top:1px solid rgba(255,255,255,.1);
+    padding:8px 10px;gap:7px;flex-shrink:0;
+  }
+  .mob-btn{
+    flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:3px;padding:9px 4px;border-radius:10px;border:none;cursor:pointer;
+    font-size:9px;font-weight:700;letter-spacing:.04em;
+    transition:opacity .15s,transform .1s;
+  }
+  .mob-btn:active{opacity:.7;transform:scale(.96);}
+  .mob-btn svg{width:20px;height:20px;}
+  .mob-btn.mb-add{background:rgba(99,102,241,.25);color:#a5b4fc;border:1px solid rgba(99,102,241,.4);}
+  .mob-btn.mb-confirm{background:var(--gold);color:var(--navy);border:none;}
+  .mob-btn.mb-back{background:rgba(255,255,255,.08);color:rgba(255,255,255,.55);border:1px solid rgba(255,255,255,.12);}
+  .mob-btn.mb-cancel{background:rgba(239,68,68,.15);color:#fca5a5;border:1px solid rgba(239,68,68,.3);}
+
+  /* Footer — slim on mobile, progress only */
+  .footer{padding:8px 14px;gap:10px;}
+  .btn-confirm{display:none;}  /* handled by mob-action-bar */
+  .pct-num{font-size:14px;}
+
+  /* Bigger scan box */
+  .scan-area{padding:14px 14px;}
+  #scan-inp{font-size:26px;}
+  .result-title{font-size:20px;}
+  .result{padding:14px 16px;}
+
+  /* Sim buttons — horizontal scroll, no wrap */
+  .sim-row{padding:8px 12px;overflow-x:auto;flex-wrap:nowrap;}
+  .sim-row::-webkit-scrollbar{display:none;}
+  .btn-sim{flex-shrink:0;}
 }
 .sb-head{padding:16px 18px 12px;border-bottom:1px solid rgba(255,255,255,.08);flex-shrink:0;}
 .sb-head-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
@@ -343,6 +396,9 @@ nav{
 .soq-chip.done{background:var(--em2);border-color:var(--em3);color:#6ee7b7;}
 .soq-dot{width:5px;height:5px;border-radius:50%;background:currentColor;}
 .soq-arrow{color:rgba(255,255,255,.2);font-size:11px;}
+
+/* Mobile action bar — hidden on desktop */
+.mob-action-bar{display:none;}
 
 /* Main scan panel */
 .scan-panel{flex:1;display:flex;flex-direction:column;min-width:0;}
@@ -1010,6 +1066,26 @@ tbody td{padding:10px 16px;font-size:12px;color:var(--t1);}
         <div class="li-chip" id="liCargaChip" style="display:none"><span class="li-lbl">Load#</span><span class="li-val" id="liCarga">—</span></div>
       </div>
     </div>
+
+  <!-- Mobile Action Bar (hidden on desktop via CSS) -->
+  <div class="mob-action-bar" style="display:none;">
+    <button class="mob-btn mb-add" onclick="ovAddIDOpen()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      ADD ID
+    </button>
+    <button class="mob-btn mb-confirm" id="mobBtnConfirm" onclick="ovConfirmLoad()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+      CONFIRM
+    </button>
+    <button class="mob-btn mb-back" onclick="ovBack()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+      BACK
+    </button>
+    <button class="mob-btn mb-cancel" onclick="ovCancel()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      CANCEL
+    </button>
+  </div>
 
   <!-- Add ID Modal -->
   <div class="ov-modal" id="ovAddModal">
@@ -2251,6 +2327,7 @@ function updateFooter(){
   btn.textContent='CONFIRM LOAD'+loadLbl;
   btn.onclick=function(){openModal();};
   btn.disabled=pct<100;
+  var mobBtn=document.getElementById('mobBtnConfirm');if(mobBtn)mobBtn.disabled=pct<100;
   // Keep in-flow confirm button in sync
   var cif=document.getElementById('confirmInFlow');
   if(cif){cif.style.display=(pct===100)?'block':'none';}
