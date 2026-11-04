@@ -1355,11 +1355,17 @@ function pushMaster(rec){
       driverNotes.push('Confirm: '+typeLabel+' — App:'+c.expected+' Physical:'+c.scanned);
     });
   }
+  // Count how many loads this loader has completed today (including this one)
+  var todayStr=new Date().toLocaleDateString('en-US');
+  var loaderToday=m.filter(function(x){
+    return x.loader===rec.loader&&new Date(x.startTime).toLocaleDateString('en-US')===todayStr;
+  }).length+1;
   m.push({
     id:m.length+1,savedAt:new Date().toISOString(),
     sid:rec.sid||'',
     door:rec.door||'—',trailer:rec.trailer,
     order:rec.order,carga:rec.carga||'',
+    loaderLoadNum:loaderToday,
     loader:rec.loader,shift:rec.shift,
     startTime:s(rec.startTime),endTime:s(rec.endTime),
     loaded:rec.loaded,total:rec.total,wrongScans:rec.wrongScans,result:rec.result,
@@ -1764,10 +1770,9 @@ function confirmLoadBOL(){
 function multiStopAnswer(isMulti){
   document.getElementById('multiStopPopup').style.display='none';
   if(isMulti){
-    // Enable multi-stop mode globally
-    if(!multiStop){multiStop=true;multiStopLoadNum=1;_bolScans=[];}
-    // Show BOL scan modal
-    _bolScans=_bolScans||[];
+    // Enable multi-stop mode globally; always reset BOL list for this load
+    if(!multiStop){multiStop=true;multiStopLoadNum=1;}
+    _bolScans=[];
     _bolSelectedPosition=null;
     document.getElementById('bolScanInput').value='';
     document.getElementById('bolScanList').innerHTML='';
@@ -2416,14 +2421,18 @@ function doConfirm(){
     // Start time formatted
     var st=snap.startTime instanceof Date?snap.startTime:new Date(snap.startTime);
     var timeStr=st.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:false});
+    var todayStrPA=st.toLocaleDateString('en-US');
+    var mPA=getMaster();
+    var loaderLoadNumPA=mPA.filter(function(x){return x.loader===snap.loader&&new Date(x.startTime).toLocaleDateString('en-US')===todayStrPA;}).length+1;
     var payload={
-      date:st.toLocaleDateString('en-US'),
+      date:todayStrPA,
       time:timeStr,
       door:snap.door||'',
       sid:snap.sid||'',
       trailer:snap.trailer,
       salesOrder:snap.order,
       load:snap.carga,
+      loaderLoadNum:loaderLoadNumPA,
       loader:snap.loader,
       shift:snap.shift,
       totalPallets:snap.total,
@@ -2439,7 +2448,19 @@ function doConfirm(){
       bolStopsCount:(snap.bolStops&&snap.bolStops.length)||0,
       bolStopsSummary:(snap.bolStops&&snap.bolStops.length)
         ?snap.bolStops.map(function(s){return s.position+': '+s.bol;}).join(' | ')
-        :''
+        :'',
+      pallets:(snap.pallets||[]).map(function(p){
+        return{
+          palletId:p.id,
+          physicalLabelId:p._physicalLabelId||'',
+          sku:p.sku||'',
+          qty:p.qty||0,
+          status:p.status||'',
+          scannedAt:p.scannedAt?new Date(p.scannedAt).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false}):'',
+          driverOverride:p._driverOverride?true:false,
+          driverNote:p._driverLabel||''
+        };
+      })
     };
     fetch(POWER_AUTOMATE_URL,{
       method:'POST',
@@ -2531,7 +2552,7 @@ function renderMaster(){
       +'<td>'+(r.door&&r.door!=='—'?'<strong>'+r.door+'</strong>':'<span style="color:var(--t3)">—</span>')+'</td>'
       +'<td class="td-m td-gold">'+r.trailer+'</td>'
       +'<td class="td-m">'+r.order+'</td>'
-      +'<td style="color:var(--t3);font-size:10px;">'+(r.carga||'—')+'</td>'
+      +'<td style="color:var(--t3);font-size:10px;">'+(r.loaderLoadNum?r.loaderLoadNum:(r.carga||'—'))+'</td>'
       +'<td>'+r.loader+'</td>'
       +'<td style="color:var(--t3)">'+r.shift+'</td>'
       +'<td class="td-m" style="color:var(--t3)">'+dur+'</td>'
@@ -2559,7 +2580,7 @@ function exportMaster(){
     return[r.id,
       dt.toLocaleDateString('en-US'),
       dt.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:false}),
-      r.door||'',r.sid||'',r.trailer,r.order,r.carga||'',r.loader,r.shift,
+      r.door||'',r.sid||'',r.trailer,r.order,(r.loaderLoadNum||r.carga||''),r.loader,r.shift,
       dur,r.loaded,r.total,(r.total-r.loaded),r.wrongScans,r.result,r.driverNotes||'',bolStr];
   });
   var ws=XLSX.utils.aoa_to_sheet([h].concat(rows));
@@ -2575,7 +2596,7 @@ function exportMaster(){
     var d=dt.toLocaleDateString('en-US');
     var t=dt.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:false});
     (r.pallets||[]).forEach(function(p){
-      r2.push([r.id,d,t,r.door||'',r.trailer,r.order,r.carga||'',r.loader,
+      r2.push([r.id,d,t,r.door||'',r.trailer,r.order,(r.loaderLoadNum||r.carga||''),r.loader,
         p.id,p.physicalLabelId||'',p.sku,p.qty,p.status,
         p.scannedAt?new Date(p.scannedAt).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:false}):'\u2014',
         p.driverOverride?'YES':'',p.driverLabel||'']);
@@ -2591,7 +2612,7 @@ function exportMaster(){
   m.forEach(function(r){
     var d=new Date(r.startTime).toLocaleDateString('en-US');
     (r.pallets||[]).filter(function(p){return p.status!=='LOADED'&&!p.driverOverride;}).forEach(function(p){
-      r3.push([r.id,d,r.door||'',r.trailer,r.order,r.carga||'',r.loader,p.id,p.sku,p.qty]);
+      r3.push([r.id,d,r.door||'',r.trailer,r.order,(r.loaderLoadNum||r.carga||''),r.loader,p.id,p.sku,p.qty]);
     });
   });
   if(r3.length){
@@ -2607,7 +2628,7 @@ function exportMaster(){
     var d=dt.toLocaleDateString('en-US');
     var t=dt.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:false});
     (r.pallets||[]).filter(function(p){return p.driverOverride;}).forEach(function(p){
-      r4ov.push([r.id,d,t,r.door||'',r.trailer,r.order,r.carga||'',r.loader,p.id,p.physicalLabelId||'',p.driverLabel||'']);
+      r4ov.push([r.id,d,t,r.door||'',r.trailer,r.order,(r.loaderLoadNum||r.carga||''),r.loader,p.id,p.physicalLabelId||'',p.driverLabel||'']);
     });
   });
   if(r4ov.length){
@@ -2632,18 +2653,28 @@ function exportMaster(){
     XLSX.utils.book_append_sheet(wb,ws5bol,'BOL Stops');
   }
 
-  // Sheet 6 \u2014 Scan Log
-  var h5=['Load#','Date','Door','Trailer','SO','Load','Loader','Time','Pallet ID','Result'];
+  // Sheet 6 \u2014 Scan Log (every scan event with SKU, Qty, Driver Note)
+  var h5=['Load#','Date','Door','Trailer','SO','Loader Load #','Loader','Scan Time','Pallet ID','SKU','Qty','Result','Driver Note'];
   var r5=[];
   m.forEach(function(r){
     var d=new Date(r.startTime).toLocaleDateString('en-US');
+    var loadNum=r.loaderLoadNum||r.carga||'';
+    // Build pallet map for quick lookup of SKU/qty/driverNote by pallet ID
+    var palMap={};
+    (r.pallets||[]).forEach(function(p){palMap[p.id]=p;});
     (r.scanLog||[]).forEach(function(s){
-      r5.push([r.id,d,r.door||'',r.trailer,r.order,r.carga||'',r.loader,
-        new Date(s.time).toLocaleString('en-US'),s.id,s.result]);
+      var pal=palMap[s.id]||{};
+      var skuVal=s.sku||pal.sku||'';
+      var qtyVal=pal.qty||'';
+      var noteVal=pal.driverLabel||'';
+      r5.push([r.id,d,r.door||'',r.trailer,r.order,loadNum,r.loader,
+        s.time?new Date(s.time).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false}):'',
+        s.id,skuVal,qtyVal,s.result,noteVal]);
     });
   });
   if(r5.length){
     var ws5=XLSX.utils.aoa_to_sheet([h5].concat(r5));
+    ws5['!cols']=[{wch:5},{wch:12},{wch:6},{wch:10},{wch:10},{wch:7},{wch:10},{wch:10},{wch:16},{wch:14},{wch:5},{wch:9},{wch:30}];
     XLSX.utils.book_append_sheet(wb,ws5,'Scan Log');
   }
 
