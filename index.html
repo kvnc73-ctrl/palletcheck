@@ -421,6 +421,19 @@ nav{
 .kpi-sub{font-size:9px;color:rgba(255,255,255,.25);margin-top:3px;font-family:var(--mono);}
 .kpi-so{font-size:9px;font-family:var(--mono);background:var(--goldp);
   color:var(--gold);padding:1px 6px;border-radius:2px;margin-left:5px;}
+/* Load info strip */
+.load-info-strip{
+  grid-column:1/-1;display:flex;align-items:center;gap:0;
+  border-top:1px solid rgba(255,255,255,.06);
+  background:rgba(0,0,0,.18);padding:5px 20px;flex-wrap:wrap;
+}
+.li-chip{display:flex;align-items:center;gap:5px;padding:2px 12px 2px 0;
+  border-right:1px solid rgba(255,255,255,.07);margin-right:12px;}
+.li-chip:last-child{border-right:none;margin-right:0;}
+.li-lbl{font-size:9px;letter-spacing:1.2px;text-transform:uppercase;color:rgba(255,255,255,.25);}
+.li-val{font-family:var(--mono);font-size:11px;color:rgba(255,255,255,.65);font-weight:600;}
+.li-val.gold{color:var(--gold);}
+.li-val.dim{color:rgba(255,255,255,.25);font-style:italic;}
 
 /* Scan area */
 .scan-area{flex:1;padding:20px 28px;display:flex;flex-direction:column;gap:14px;overflow:hidden;}
@@ -592,6 +605,14 @@ tbody td{padding:10px 16px;font-size:12px;color:var(--t1);}
 .a-sku{font-family:var(--mono);font-size:10px;color:var(--navy);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .a-qty{font-family:var(--mono);font-size:11px;color:var(--t2);text-align:right;}
 .a-so{font-family:var(--mono);font-size:10px;color:var(--gold2);text-align:right;}
+.a-sess{
+  grid-column:1/-1;display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  padding:6px 28px 5px;background:#f0f4ff;border-bottom:1px solid var(--slate3);
+  border-top:2px solid var(--slate3);font-size:10px;color:var(--t2);
+}
+.a-sess:first-child{border-top:none;}
+.a-sess-chip{background:#e2e8f0;border-radius:4px;padding:1px 7px;font-family:var(--mono);font-size:10px;color:var(--navy);font-weight:600;}
+.a-sess-chip.gold{background:#fef3c7;color:#92400e;}
 
 /* ══════════════════════════════════════
    DOCS VIEW
@@ -979,6 +1000,14 @@ tbody td{padding:10px 16px;font-size:12px;color:var(--t1);}
         <button class="kpi-btn btn-confirm" onclick="ovConfirmLoad()">Confirm Load</button>
         <button class="kpi-btn btn-back" onclick="ovBack()">↩ Back</button>
         <button class="kpi-btn btn-cancel" onclick="ovCancel()">✕ Cancel</button>
+      </div>
+      <div class="load-info-strip" id="loadInfoStrip">
+        <div class="li-chip"><span class="li-lbl">Door</span><span class="li-val gold" id="liDoor">—</span></div>
+        <div class="li-chip"><span class="li-lbl">Trailer</span><span class="li-val" id="liTrailer">—</span></div>
+        <div class="li-chip"><span class="li-lbl">Loader</span><span class="li-val" id="liLoader">—</span></div>
+        <div class="li-chip"><span class="li-lbl">Shift</span><span class="li-val" id="liShift">—</span></div>
+        <div class="li-chip" id="liSIDChip" style="display:none"><span class="li-lbl">SID#</span><span class="li-val gold" id="liSID">—</span></div>
+        <div class="li-chip" id="liCargaChip" style="display:none"><span class="li-lbl">Load#</span><span class="li-val" id="liCarga">—</span></div>
       </div>
     </div>
 
@@ -2197,6 +2226,18 @@ function updateKPIs(){
   document.getElementById('kRemain').textContent=sc-ld;
   document.getElementById('kMis').textContent=G.wrongScans;
   document.getElementById('kMis').className='kpi-val'+(G.wrongScans>0?' red':'');
+  // Load info strip
+  var _set=function(id,val,cls){var el=document.getElementById(id);if(el){el.textContent=val||'—';el.className='li-val'+(cls?' '+cls:'')+((!val||val==='—')?' dim':'');}};
+  _set('liDoor',G.door,'gold');
+  _set('liTrailer',G.trailer,'');
+  _set('liLoader',G.loader,'');
+  _set('liShift',G.shift,'');
+  var sidChip=document.getElementById('liSIDChip');
+  if(sidChip)sidChip.style.display=G.sid?'flex':'none';
+  _set('liSID',G.sid,'gold');
+  var cargaChip=document.getElementById('liCargaChip');
+  if(cargaChip)cargaChip.style.display=G.carga?'flex':'none';
+  _set('liCarga',G.carga,'');
 }
 function updateFooter(){
   var sc=countTotalUnique(),ld=countUniquePallets('LOADED');
@@ -2290,7 +2331,7 @@ function doScan(val){
   }
   var _entrySkus=matches.length>1?matches.map(function(i){return G.pallets[i].sku;}).filter(function(s){return s;}).join('/'):( idx>=0?G.pallets[idx].sku:'' );
   var _entryQty=matches.length>0?matches.reduce(function(a,i){return a+(G.pallets[i].qty||0);},0):(idx>=0?(G.pallets[idx].qty||0):0);
-  var entry={time:new Date(),id:val,result:cls==='ok'?'OK':cls==='dup'?'DUPLICATE':'REJECTED',sku:_entrySkus,qty:_entryQty||'',so:idx>=0?G.pallets[idx].so:G.curSO};
+  var entry={time:new Date(),id:val,result:cls==='ok'?'OK':cls==='dup'?'DUPLICATE':'REJECTED',sku:_entrySkus,qty:_entryQty||'',so:idx>=0?G.pallets[idx].so:G.curSO,door:G.door||'',trailer:G.trailer||'',loader:G.loader||'',shift:G.shift||''};
   G.scanLog.push(entry);G.allLog.push(entry);actLog.unshift(entry);if(actLog.length>500)actLog.pop();
   // Result
   var rc=document.getElementById('result');
@@ -2323,7 +2364,7 @@ function quickAddUnknownPallet(val){
   };
   G.pallets.push(newPal);
   // Log the override
-  var entry={time:new Date(),id:val,result:'OVERRIDE',sku:'NOT-IN-SYSTEM',so:G.curSO||''};
+  var entry={time:new Date(),id:val,result:'OVERRIDE',sku:'NOT-IN-SYSTEM',so:G.curSO||'',door:G.door||'',trailer:G.trailer||'',loader:G.loader||'',shift:G.shift||''};
   G.scanLog.push(entry);G.allLog.push(entry);actLog.unshift(entry);if(actLog.length>500)actLog.pop();
   // Update UI
   var rc=document.getElementById('result');
@@ -2732,17 +2773,32 @@ function renderActivity(){
   document.getElementById('aCnt').textContent=actLog.length+' events';
   var sc=document.getElementById('actScroll');
   if(!actLog.length){sc.innerHTML='<div class="empty-box"><div class="empty-icon">&#x1F4CB;</div><div class="empty-h">No activity yet</div><div class="empty-s">Scan events appear here in real time.</div></div>';return;}
-  sc.innerHTML='<div id="actEmpty" style="display:none"></div>'+actLog.map(function(e){
+  var html='<div id="actEmpty" style="display:none"></div>';
+  var lastSessKey='';
+  // actLog is newest-first; render newest first, group by door+trailer+loader session
+  actLog.forEach(function(e){
+    var sessKey=(e.door||'')+'|'+(e.trailer||'')+'|'+(e.loader||'')+'|'+(e.shift||'');
+    if(sessKey!==lastSessKey){
+      lastSessKey=sessKey;
+      var chips='';
+      if(e.door)chips+='<span class="a-sess-chip gold">&#x1F6AA; '+(e.door||'')+'</span>';
+      if(e.trailer)chips+='<span class="a-sess-chip">&#x1F69B; '+(e.trailer||'')+'</span>';
+      if(e.loader)chips+='<span class="a-sess-chip">&#x1F464; '+(e.loader||'')+'</span>';
+      if(e.shift)chips+='<span class="a-sess-chip">&#x23F0; '+(e.shift||'')+'</span>';
+      if(!chips)chips='<span style="color:var(--t3);font-style:italic;">Session</span>';
+      html+='<div class="a-sess">'+chips+'</div>';
+    }
     var c=e.result==='OK'?'ok':e.result==='DUPLICATE'?'dup':'bad';
     var skuTxt=e.sku||'—';
     var qtyTxt=(e.qty!=null&&e.qty!==''&&e.qty!==undefined)?e.qty:'—';
-    return '<div class="arow"><span class="a-time">'+e.time.toLocaleString()+'</span>'
+    html+='<div class="arow"><span class="a-time">'+e.time.toLocaleString()+'</span>'
       +'<span class="a-badge '+c+'">'+e.result+'</span>'
       +'<span class="a-pid">'+e.id+'</span>'
       +'<span class="a-sku" title="'+skuTxt+'">'+skuTxt+'</span>'
       +'<span class="a-qty">'+qtyTxt+'</span>'
       +'<span class="a-so">SO '+e.so+'</span></div>';
-  }).join('');
+  });
+  sc.innerHTML=html;
 }
 
 // ── YARD PULSE ──
