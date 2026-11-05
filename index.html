@@ -1649,7 +1649,7 @@ function pickCarga(c,el){
     var ps=DB[so],qty=ps.reduce(function(a,p){return a+p.qty;},0);
     var skus=[];ps.forEach(function(p){if(skus.indexOf(p.sku)<0)skus.push(p.sku);});
     hint.className='so-hint ok';
-    hint.innerHTML='&#x2714; Found: <strong>'+ps.length+' pallets</strong> \u00B7 '+skus.slice(0,3).join(', ')+' \u00B7 '+qty+' units';
+    hint.innerHTML='&#x2714; Found: <strong>'+_palCount(so)+' pallets</strong> \u00B7 '+skus.slice(0,3).join(', ')+' \u00B7 '+qty+' units';
     hint.style.display='block';
     showOrderInfo(so);
     showLinked(so);
@@ -1658,6 +1658,8 @@ function pickCarga(c,el){
     hint.style.display='block';ls.style.display='none';oi.style.display='none';
   } else{hint.style.display='none';ls.style.display='none';oi.style.display='none';}
 });})();
+// Count unique pallet IDs for a SO (DB rows are per-SKU, not per-pallet)
+function _palCount(so){if(!DB[so])return 0;var ids={};DB[so].forEach(function(r){ids[r.id]=true;});return Object.keys(ids).length;}
 function showOrderInfo(so){
   var oi=document.getElementById('soOrderInfo');
   var link=LINKS[so];
@@ -1666,7 +1668,7 @@ function showOrderInfo(so){
   var custPO=soRec&&soRec.po?soRec.po:(soRec&&soRec.custPO?soRec.custPO:'\u2014');
   var group=link&&link.group?link.group:[so];
   var totalPallets=0;
-  group.forEach(function(s){totalPallets+=(DB[s]?DB[s].length:0);});
+  group.forEach(function(s){totalPallets+=_palCount(s);});
   oi.innerHTML=
     '<div class="so-oi-item"><div class="so-oi-label">Customer</div><div class="so-oi-val" style="font-size:12px">'+custName+'</div></div>'
     +'<div class="so-oi-item"><div class="so-oi-label">Cust PO</div><div class="so-oi-val">'+custPO+'</div></div>'
@@ -1688,17 +1690,18 @@ function showLinked(primary){
   ls.style.display='block';
   var total=0,html='';
   info.group.forEach(function(so,i){
-    var ps=DB[so]||[];total+=ps.length;
+    var ps=DB[so]||[];total+=_palCount(so);
     var qty=ps.reduce(function(a,p){return a+p.qty;},0);
     var isp=so===primary;
     html+='<div class="lcard '+(isp?'primary':'sibling')+'">'
       +'<div class="lcard-so">SO '+so+'</div>'
-      +'<div class="lcard-info">'+ps.length+' pallets \u00B7 '+qty+' units</div>'
+      +'<div class="lcard-info">'+_palCount(so)+' pallets \u00B7 '+qty+' units</div>'
       +'<span class="lcard-badge '+(isp?'badge-primary':'badge-sib')+'">STOP '+(i+1)+'</span>'
       +'</div>';
   });
   document.getElementById('linkedCards').innerHTML=html;
-  document.getElementById('linkedTotal').textContent=info.group.length+' orders \u00B7 '+total+' pallets';
+  var _totalUniq=0;info.group.forEach(function(s){_totalUniq+=_palCount(s);});
+  document.getElementById('linkedTotal').textContent=info.group.length+' orders \u00B7 '+_totalUniq+' pallets';
   lcarouselIdx=0;lcarouselRender();
 
   // Build load selector buttons (one per SO in group)
@@ -1710,7 +1713,7 @@ function showLinked(primary){
     btnHtml+='<div class="shift-opt" onclick="pickCarga(\''+n+'\',this)">'
       +'<div class="shift-name" style="font-size:16px">'+(lbl[i]||'L'+(i+1))+'</div>'
       +'<div class="shift-time">'+n+'</div>'
-      +'<div class="shift-time" style="font-size:9px;margin-top:2px;color:rgba(255,255,255,.4)">'+ps.length+' pallets</div>'
+      +'<div class="shift-time" style="font-size:9px;margin-top:2px;color:rgba(255,255,255,.4)">'+_palCount(so)+' pallets</div>'
       +'</div>';
   });
   if(grid)grid.innerHTML=btnHtml;
@@ -1871,9 +1874,9 @@ function lookupBOL(){
   _pendingLoad=found;
   var sidDisplay=found.sid;
   var totalPal=0;
-  load.sos.forEach(function(s){if(DB[s])totalPal+=DB[s].length;});
+  load.sos.forEach(function(s){totalPal+=_palCount(s);});
   var destStr=(load.dest||'')+(load.destCity?' — '+load.destCity+(load.destState?', '+load.destState:''):'');
-  var soList=load.sos.map(function(s){return 'SO '+s+(DB[s]?' ('+DB[s].length+' pal)':'');}).join('<br>');
+  var soList=load.sos.map(function(s){var n=_palCount(s);return 'SO '+s+(n?' ('+n+' pal)':'');}).join('<br>');
   var fromPallet=found.type==='pallet'
     ?'<div style="font-size:11px;color:#93c5fd;margin-bottom:8px;">Pallet <strong>'+found.palletId+'</strong> → SO <strong>'+found.so+'</strong></div>'
     :found.type==='so'
@@ -2078,7 +2081,7 @@ function onSOInput(idx){
   if(st){
     if(!val){st.textContent='';}
     else if(valid){
-      var cnt=DB[val].length;
+      var _ids={};DB[val].forEach(function(r){_ids[r.id]=true;});var cnt=Object.keys(_ids).length;
       st.innerHTML='<span style="color:#34d399;">✔ '+cnt+' pallets</span>';
     } else {
       st.innerHTML='<span style="color:#f87171;">Not found</span>';
@@ -2098,7 +2101,7 @@ function updateSOSummary(){
     group.forEach(function(s){
       if(allSOs.indexOf(s)<0&&DB[s]&&DB[s].length>0){
         allSOs.push(s);
-        totalPallets+=DB[s].length;
+        totalPallets+=_palCount(s);
       }
     });
   });
@@ -2107,7 +2110,7 @@ function updateSOSummary(){
   var html='';
   allSOs.forEach(function(s){
     var dest=getSODest(s);
-    var cnt=DB[s]?DB[s].length:0;
+    var cnt=_palCount(s);
     html+='<div style="display:flex;justify-content:space-between;font-size:12px;padding:2px 0;color:rgba(255,255,255,.7);">'
       +'<span>SO '+s+(dest?' — '+dest:'')+'</span>'
       +'<span style="color:#34d399;">'+cnt+' pallets</span></div>';
