@@ -2224,7 +2224,8 @@ function renderManifest(){
       var soIds={},soLdIds={};
       pallets.forEach(function(p){soIds[p.id]=true;if(p.status==='LOADED')soLdIds[p.id]=true;});
       var soTotal=Object.keys(soIds).length,soLd=Object.keys(soLdIds).length;
-      rows+='<div class="msep">SO '+s+' <small>'+soLd+'/'+soTotal+'</small></div>';
+      var soQty=pallets.reduce(function(a,p){return a+(p.qty||0);},0);
+      rows+='<div class="msep">SO '+s+' <small>'+soLd+'/'+soTotal+'</small><span style="margin-left:8px;font-family:var(--mono);font-size:10px;color:rgba(255,255,255,.35);">'+soQty+'U</span></div>';
     }
     // Group by pallet ID to collapse mix pallets into one row
     var byId={},idOrder=[];
