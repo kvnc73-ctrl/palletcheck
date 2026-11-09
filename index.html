@@ -34,8 +34,12 @@ nav{
 .nav-brand{display:flex;align-items:center;gap:10px;padding:0 20px;border-right:1px solid rgba(255,255,255,.1);}
 @media(max-width:600px){
   .nav-brand{display:none;}
-  #ntActivity,#ntMaster,#ntDocs,#ntAdmin{display:none;}
-  .nav-tab#ntLoad{font-size:15px;padding:0 16px;flex:1;}
+  #ntActivity,#ntMaster,#ntDocs,#ntAdmin{display:flex;}
+  .nav-tab#ntLoad{font-size:11px;padding:0 10px;}
+  .nav-tab{font-size:11px;padding:0 10px;gap:4px;}
+  .nav-tab svg{display:none;}
+  .nav-tabs{overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;}
+  .nav-tabs::-webkit-scrollbar{display:none;}
 }
 .nav-brand-box{
   width:32px;height:32px;background:var(--gold);border-radius:6px;
@@ -266,7 +270,7 @@ nav{
   /* Sidebar — collapses to a tap-to-expand manifest drawer */
   .sidebar{
     width:100%;border-right:none;border-bottom:1px solid rgba(255,255,255,.1);
-    max-height:52px;overflow:hidden;transition:max-height .35s cubic-bezier(.4,0,.2,1);flex-shrink:0;
+    max-height:68px;overflow:hidden;transition:max-height .35s cubic-bezier(.4,0,.2,1);flex-shrink:0;
   }
   .sidebar.mob-open{max-height:55vh;}
   .sb-head{
@@ -328,6 +332,9 @@ nav{
   .mob-btn svg{width:20px;height:20px;}
   .mob-btn.mb-add{background:rgba(99,102,241,.25);color:#a5b4fc;border:1px solid rgba(99,102,241,.4);}
   .mob-btn.mb-confirm{background:var(--gold);color:var(--navy);border:none;}
+  .mob-btn.mb-confirm:disabled{background:rgba(255,255,255,.12);color:rgba(255,255,255,.25);cursor:not-allowed;pointer-events:none;}
+  .prow-remove{background:transparent;color:rgba(239,68,68,.5);border:none;border-radius:5px;padding:4px 7px;font-size:13px;font-weight:900;cursor:pointer;flex-shrink:0;line-height:1;transition:color .15s,background .15s;}
+  .prow-remove:active{background:rgba(239,68,68,.2);color:#fca5a5;}
   .mob-btn.mb-back{background:rgba(255,255,255,.08);color:rgba(255,255,255,.55);border:1px solid rgba(255,255,255,.12);}
   .mob-btn.mb-cancel{background:rgba(239,68,68,.15);color:#fca5a5;border:1px solid rgba(239,68,68,.3);}
 
@@ -829,6 +836,9 @@ tbody td{padding:10px 16px;font-size:12px;color:var(--t1);}
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="3" width="15" height="13"/><path d="m16 8 5 0 3 4v4h-8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
       Trailer &amp; Order
     </div>
+    <div style="text-align:right;margin-bottom:4px;">
+      <button onclick="injectDemoSOs()" style="background:none;border:1px solid rgba(251,191,36,.3);color:#fbbf24;border-radius:6px;padding:3px 10px;font-size:11px;cursor:pointer;font-family:var(--sans);letter-spacing:.5px;">🧪 LOAD DEMO</button>
+    </div>
     <div class="sc-row">
       <div class="fg">
         <label class="fl">Loading Door</label>
@@ -1064,6 +1074,10 @@ tbody td{padding:10px 16px;font-size:12px;color:var(--t1);}
         <div class="li-chip"><span class="li-lbl">Shift</span><span class="li-val" id="liShift">—</span></div>
         <div class="li-chip" id="liSIDChip" style="display:none"><span class="li-lbl">SID#</span><span class="li-val gold" id="liSID">—</span></div>
         <div class="li-chip" id="liCargaChip" style="display:none"><span class="li-lbl">Load#</span><span class="li-val" id="liCarga">—</span></div>
+        <div class="li-chip" id="liMultiStopChip" style="display:none;cursor:pointer;" onclick="msOpenEditor()">
+          <span class="li-lbl">Stops</span>
+          <span class="li-val" id="liMultiStopVal" style="color:#f59e0b;">🔀 Edit</span>
+        </div>
       </div>
     </div>
 
@@ -1075,8 +1089,9 @@ tbody td{padding:10px 16px;font-size:12px;color:var(--t1);}
     </button>
     <button class="mob-btn mb-confirm" id="mobBtnConfirm" onclick="ovConfirmLoad()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-      CONFIRM
+      DONE BY LOADER
     </button>
+
     <button class="mob-btn mb-back" onclick="ovBack()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
       BACK
@@ -1085,6 +1100,90 @@ tbody td{padding:10px 16px;font-size:12px;color:var(--t1);}
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       CANCEL
     </button>
+  </div>
+
+  <!-- Multi-Stop BOL Modal (shown at scan start when multi-stop=YES) -->
+  <div class="ov-modal" id="msStopModal" style="display:none;">
+    <div class="ov-card" style="max-width:360px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+        <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:#f59e0b;">🔀 MULTI-STOP</div>
+        <button onclick="msDoneByLoader()" style="background:none;border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.5);border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px;font-family:var(--sans);">✕ Done loading</button>
+      </div>
+      <div class="ov-title" id="msStopTitle">Stop 1 — Scan BOL</div>
+      <div class="ov-sub" id="msStopSub">Scan the Bill of Lading for this stop, then select its position.</div>
+      <div id="msStopRemaining" style="display:none;font-size:13px;font-weight:700;color:#34d399;margin-bottom:8px;"></div>
+      <!-- Step 1: BOL scan -->
+      <div id="msStep1">
+        <div style="font-size:10px;color:rgba(255,255,255,.4);letter-spacing:.08em;text-transform:uppercase;margin-bottom:5px;">BOL Number</div>
+        <input class="ov-input" id="msBolInput" placeholder="Scan or type BOL barcode…"
+          autocomplete="off" autocorrect="off" spellcheck="false"
+          onkeydown="if(event.key==='Enter'){msNextStep();}">
+        <div class="ov-row" style="margin-top:8px;">
+          <button class="ov-ok" onclick="msNextStep()">Next →</button>
+          <button class="ov-cancel" onclick="msSkipBOL()">Skip BOL</button>
+        </div>
+      </div>
+      <!-- Step 2: Position -->
+      <div id="msStep2" style="display:none;">
+        <div style="font-size:10px;color:rgba(255,255,255,.4);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px;">Position in Trailer</div>
+        <div style="display:flex;gap:8px;margin-bottom:12px;">
+          <button id="msPosNOSE" onclick="msSetPos('NOSE')"
+            style="flex:1;padding:12px 6px;border:2px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);color:rgba(255,255,255,.7);border-radius:8px;cursor:pointer;font-size:12px;font-weight:700;font-family:var(--sans);">🔴 NOSE</button>
+          <button id="msPosMIDDLE" onclick="msSetPos('MIDDLE')"
+            style="flex:1;padding:12px 6px;border:2px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);color:rgba(255,255,255,.7);border-radius:8px;cursor:pointer;font-size:12px;font-weight:700;font-family:var(--sans);">🟡 MIDDLE</button>
+          <button id="msPosTAIL" onclick="msSetPos('TAIL')"
+            style="flex:1;padding:12px 6px;border:2px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);color:rgba(255,255,255,.7);border-radius:8px;cursor:pointer;font-size:12px;font-weight:700;font-family:var(--sans);">🟢 TAIL</button>
+        </div>
+        <div class="ov-row">
+          <button class="ov-ok" id="msPosNext" onclick="msStepToQty()" disabled>Next →</button>
+          <button class="ov-cancel" onclick="msStep(1)">← Back</button>
+        </div>
+      </div>
+      <!-- Step 3: Qty -->
+      <div id="msStep3" style="display:none;">
+        <div style="font-size:10px;color:rgba(255,255,255,.4);letter-spacing:.08em;text-transform:uppercase;margin-bottom:5px;">Pallets to load on this stop</div>
+        <input type="number" id="msQtyInput" min="1" max="999" placeholder="Qty…" class="ov-input"
+          style="font-size:20px;font-weight:800;"
+          onkeydown="if(event.key==='Enter'){msConfirmStop();}">
+        <div class="ov-row" style="margin-top:8px;">
+          <button class="ov-ok" onclick="msConfirmStop()">Start Scanning ✓</button>
+          <button class="ov-cancel" onclick="msStep(2)">← Back</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Next Stop? Popup -->
+  <div class="ov-modal" id="msNextStopModal" style="display:none;">
+    <div class="ov-card" style="max-width:340px;text-align:center;">
+      <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:#f59e0b;margin-bottom:8px;">🔀 MULTI-STOP</div>
+      <div class="ov-title" id="msNextStopTitle">Load 1 Saved ✓</div>
+      <div class="ov-sub" id="msNextStopSub">Does this trailer have another stop?</div>
+      <div style="display:flex;gap:10px;margin-top:16px;">
+        <button onclick="msNextStopAnswer(true)"
+          style="flex:1;padding:14px;background:#f59e0b;border:none;color:#1a1a2e;border-radius:8px;cursor:pointer;font-size:14px;font-weight:800;font-family:var(--sans);">
+          YES — Next Stop
+        </button>
+        <button onclick="msNextStopAnswer(false)"
+          style="flex:1;padding:14px;background:rgba(52,211,153,.15);border:1px solid rgba(52,211,153,.4);color:#34d399;border-radius:8px;cursor:pointer;font-size:14px;font-weight:800;font-family:var(--sans);">
+          NO — Done
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Multi-Stop Editor Modal -->
+  <div class="ov-modal" id="msEditModal" style="display:none;">
+    <div class="ov-card" style="max-width:380px;">
+      <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:#60a5fa;margin-bottom:4px;">🔀 EDIT STOPS</div>
+      <div class="ov-title">Multi-Stop Editor</div>
+      <div class="ov-sub">Tap a stop to edit its BOL, position, or qty.</div>
+      <div id="msEditList" style="margin-bottom:12px;"></div>
+      <div class="ov-row">
+        <button class="ov-ok" onclick="document.getElementById('msEditModal').style.display='none';updProg();updateFooter();updateKPIs();">Done</button>
+        <button class="ov-cancel" onclick="document.getElementById('msEditModal').style.display='none'">Close</button>
+      </div>
+    </div>
   </div>
 
   <!-- Add ID Modal -->
@@ -1152,13 +1251,7 @@ tbody td{padding:10px 16px;font-size:12px;color:var(--t1);}
       <div class="chip-row" id="chipRow"><span class="chip-empty">No scans yet</span></div>
     </div>
 
-    <!-- CONFIRM LOAD — visible in flow on mobile, after scan result -->
-    <div id="confirmInFlow" style="display:none;padding:0 20px 16px;">
-      <button class="btn-confirm" style="width:100%;justify-content:center;padding:14px;font-size:15px;" onclick="openModal()">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>
-        CONFIRM LOAD
-      </button>
-    </div>
+    <!-- confirmInFlow removed — DONE BY LOADER button in mob-action-bar handles this -->
 
     <div class="sim-row">
       <span class="sim-label">Simulate</span>
@@ -1377,7 +1470,7 @@ tbody td{padding:10px 16px;font-size:12px;color:var(--t1);}
 <div id="modal-overlay">
   <div class="modal">
     <div class="modal-icon">&#x2705;</div>
-    <div class="modal-title">CONFIRM LOAD</div>
+    <div class="modal-title">DONE BY LOADER ✓</div>
     <div class="modal-sub">Review before saving. Record goes to Master Data automatically.</div>
     <div class="modal-summ" id="modalSumm"></div>
     <div class="miss-box" id="missBox" style="display:none">
@@ -1397,6 +1490,54 @@ tbody td{padding:10px 16px;font-size:12px;color:var(--t1);}
 var DB={};var LINKS={};var SOINFO={};
 var DOCK_DB={};
 var _dataReady=false;
+
+// ── DEMO DATA (auto-loads if no real data present after page load) ──
+// SID# 214999001 → SO-5001 (5 pal) + SO-5002 (4 pal) = 9 pallets total, 2-stop demo
+var _DEMO_DATA={
+  DB:{
+    'SO-5001':[
+      {id:'23PLT5001A',sku:'SKU-AAA',qty:1,lot:'LOT1'},
+      {id:'23PLT5001B',sku:'SKU-AAA',qty:1,lot:'LOT1'},
+      {id:'23PLT5001C',sku:'SKU-BBB',qty:1,lot:'LOT2'},
+      {id:'23PLT5001D',sku:'SKU-BBB',qty:1,lot:'LOT2'},
+      {id:'23PLT5001E',sku:'SKU-CCC',qty:1,lot:'LOT3'}
+    ],
+    'SO-5002':[
+      {id:'23PLT5002A',sku:'SKU-DDD',qty:1,lot:'LOT4'},
+      {id:'23PLT5002B',sku:'SKU-DDD',qty:1,lot:'LOT4'},
+      {id:'23PLT5002C',sku:'SKU-EEE',qty:1,lot:'LOT5'},
+      {id:'23PLT5002D',sku:'SKU-EEE',qty:1,lot:'LOT5'}
+    ]
+  },
+  DOCK:{
+    '214999001':{sos:['SO-5001','SO-5002'],dest:'DEMO DEST',destCity:'Miami',destState:'FL',sid:'214999001'}
+  }
+};
+function loadDemoIfEmpty(){
+  if(!_dataReady||Object.keys(DB).length===0){
+    Object.assign(DB,_DEMO_DATA.DB);
+    Object.assign(DOCK_DB,_DEMO_DATA.DOCK);
+    _dataReady=true;
+    var ds=document.getElementById('dataStatus');
+    if(ds)ds.style.display='none';
+    LINKS['214999001']={type:'sid',sos:['SO-5001','SO-5002'],dest:'DEMO DEST',destCity:'Miami',destState:'FL'};
+    console.log('[PalletCheck] DEMO data loaded — 9 pallets across SO-5001 + SO-5002, SID 214999001');
+    if(typeof yardPulse==='function')yardPulse();
+  }
+}
+// Auto-inject demo after 1.5s if real data hasn't loaded
+setTimeout(loadDemoIfEmpty,1500);
+
+// Force-add demo SOs into whatever DB is loaded (safe — won't collide with real SOs)
+function injectDemoSOs(){
+  Object.assign(DB,_DEMO_DATA.DB);
+  Object.assign(DOCK_DB,_DEMO_DATA.DOCK);
+  // Register SID# so the Search field finds it
+  LINKS['214999001']={type:'sid',sos:['SO-5001','SO-5002'],dest:'DEMO DEST',destCity:'Miami',destState:'FL'};
+  _dataReady=true;
+  toast('Demo cargado — SID# 214999001 → SO-5001 (5 pal) + SO-5002 (4 pal)','tinfo');
+  if(typeof yardPulse==='function')yardPulse();
+}
 (function(){
   var ds=document.getElementById('dataStatus');
   if(ds)ds.style.display='none';
@@ -1905,7 +2046,24 @@ function lookupBOL(){
     '<div><span style="color:rgba(255,255,255,.5);font-size:11px;">Destination</span> '+destStr+'</div>'+
     '<div><span style="color:rgba(255,255,255,.5);font-size:11px;">Carrier</span> '+load.carrier+'</div>'+
     (load.door?'<div><span style="color:rgba(255,255,255,.5);font-size:11px;">Door</span> <strong>'+load.door+'</strong></div>':'')+
-    '<div style="margin-top:6px;font-size:11px;color:rgba(255,255,255,.4);">'+soList+'</div>';
+    '<div style="margin-top:6px;font-size:11px;color:rgba(255,255,255,.4);">'+soList+'</div>'+
+    '<!-- Driver count override -->'+
+    '<div id="driverCountRow" style="margin-top:12px;border-top:1px solid rgba(255,255,255,.08);padding-top:10px;">'+
+      '<div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:6px;">Driver physical count matches app?</div>'+
+      '<div style="display:flex;gap:8px;align-items:center;">'+
+        '<button onclick="driverCountMatch()" style="flex:1;padding:8px;border:1px solid rgba(52,211,153,.3);background:rgba(52,211,153,.08);color:#34d399;border-radius:7px;cursor:pointer;font-size:12px;font-weight:700;font-family:var(--sans);">✓ Yes, matches '+palDisplay+'</button>'+
+        '<button onclick="driverCountDiff('+palDisplay+')" style="flex:1;padding:8px;border:1px solid rgba(245,158,11,.3);background:rgba(245,158,11,.08);color:#f59e0b;border-radius:7px;cursor:pointer;font-size:12px;font-weight:700;font-family:var(--sans);">✎ Different count</button>'+
+      '</div>'+
+      '<div id="driverCountInput" style="display:none;margin-top:8px;">'+
+        '<div style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:4px;">Driver\'s pallet count:</div>'+
+        '<div style="display:flex;gap:8px;align-items:center;">'+
+          '<input type="number" id="driverCountVal" min="1" max="999" placeholder="Enter count" '+
+            'style="flex:1;background:rgba(255,255,255,.1);border:1px solid rgba(245,158,11,.4);color:#fff;padding:9px 12px;border-radius:7px;font-size:16px;font-weight:700;font-family:var(--sans);">'+
+          '<button onclick="applyDriverCount()" style="padding:9px 14px;background:#f59e0b;border:none;color:#1a1a2e;border-radius:7px;cursor:pointer;font-size:13px;font-weight:700;font-family:var(--sans);">SET</button>'+
+        '</div>'+
+        '<div id="driverCountNote" style="font-size:10px;color:rgba(255,255,255,.35);margin-top:4px;"></div>'+
+      '</div>'+
+    '</div>';
   document.getElementById('bolConfirm').style.display='block';
   st.textContent='';
 }
@@ -1920,28 +2078,233 @@ function confirmLoadBOL(){
 function multiStopAnswer(isMulti){
   document.getElementById('multiStopPopup').style.display='none';
   if(isMulti){
-    // Enable multi-stop mode globally; always reset BOL list for this load
-    if(!multiStop){multiStop=true;multiStopLoadNum=1;}
-    _bolScans=[];
-    _bolSelectedPosition=null;
-    document.getElementById('bolScanInput').value='';
-    document.getElementById('bolScanList').innerHTML='';
-    bolRenderScanList();
-    document.getElementById('bolScanModal').style.display='block';
-    setTimeout(function(){document.getElementById('bolScanInput').focus();},100);
-    // Update toggle UI to reflect multi-stop ON
-    var tog=document.getElementById('multiStopToggle');
-    var knob=document.getElementById('multiStopKnob');
-    var lbl=document.getElementById('multiStopLabel');
-    if(tog){tog.style.background='#f59e0b';if(knob){knob.style.left='29px';knob.style.opacity='1';}}
-    if(lbl){lbl.textContent='Multi-stop · BOL verified';}
-  } else {
-    _bolScans=[];
-    _finalizeLoadBOL();
+    // Mark multi-stop ON; modal will show in scan view after initScan
+    multiStop=true;
+    multiStopLoadNum=1;
+    msStops=[];     // reset stop records
   }
+  _finalizeLoadBOL(); // proceed to setup → loader hits Start Loading → scan view → initScan opens modal if multiStop
 }
 
 var _bolScans=[], _bolSelectedPosition=null;
+var _pendingDriverCount=null; // null = use app count; number = driver override
+
+function driverCountMatch(){
+  _pendingDriverCount=null;
+  var row=document.getElementById('driverCountRow');
+  if(row)row.innerHTML='<div style="font-size:11px;color:#34d399;">✓ Count confirmed — using app count</div>';
+}
+function driverCountDiff(appCount){
+  _pendingDriverCount=null;
+  var inp=document.getElementById('driverCountInput');
+  if(inp){inp.style.display='block';}
+  var v=document.getElementById('driverCountVal');
+  if(v){v.value='';v.focus();}
+}
+function applyDriverCount(){
+  var v=document.getElementById('driverCountVal');
+  if(!v)return;
+  var n=parseInt(v.value,10);
+  if(!n||n<1){toast('Enter a valid count','twarn');return;}
+  _pendingDriverCount=n;
+  // Show confirmation note
+  var note=document.getElementById('driverCountNote');
+  if(note){note.textContent='Driver count set to '+n+'. App will confirm load when '+n+' pallets are scanned.';}
+  var inp=document.getElementById('driverCountInput');
+  if(inp){
+    inp.innerHTML='<div style="font-size:12px;color:#f59e0b;margin-top:2px;">✎ Driver count: <strong>'+n+'</strong> pallets <button onclick="driverCountDiff(0)" style="margin-left:8px;background:transparent;border:1px solid rgba(245,158,11,.3);color:#f59e0b;padding:2px 7px;border-radius:5px;cursor:pointer;font-size:11px;font-family:var(--sans);">Change</button></div>';
+  }
+  toast('Driver count: '+n+' pallets','tinfo');
+}
+
+// ── MULTI-STOP SCAN FLOW ──
+var msStops=[]; // [{stopNum, bol, position, qty, loaded:0}]
+var msCurrentStop=1;
+var msCurrentPos=null;
+var _msConfirming=false; // debounce flag to prevent double-fire
+var msLoadedByStop=[]; // [{stopNum, loadedIds:{id:true}}] — tracks which pallet IDs were loaded per stop
+var msOrderSOList=[]; // SO list for the full order, set at first start loading in multi-stop
+var msOrderTotalCount=0; // unique pallet IDs in the full order (set at Stop 1 pool build)
+
+// ── MULTI-STOP HELPERS ──
+function msFinishTrailer(stopCount,totalLoaded){
+  var trailerLabel=multiStopTrailer;
+  multiStop=false;multiStopLoadNum=1;msStops=[];msLoadedByStop=[];msOrderSOList=[];msOrderTotalCount=0;
+  _pendingDriverCount=null;
+  ['inpDoor','inpTrailer','inpSO'].forEach(function(id){document.getElementById(id).value='';});
+  document.getElementById('soHint').style.display='none';
+  document.getElementById('soOrderInfo').style.display='none';
+  document.getElementById('linkedSection').style.display='none';
+  clearLoader();selShift='';selCarga='';
+  document.querySelectorAll('.shift-opt').forEach(function(b){b.classList.remove('on');});
+  goView('setup');yardPulse();
+  toast('✓ Trailer '+trailerLabel+' complete — '+stopCount+' stops · '+totalLoaded+' pallets loaded','tok');
+}
+function msDoneByLoader(){
+  // Loader tapped X on BOL modal — finish trailer with what was loaded
+  document.getElementById('msStopModal').style.display='none';
+  // Count unique IDs loaded across all stops
+  var _allIds={};
+  msLoadedByStop.forEach(function(s){Object.keys(s.loadedIds||{}).forEach(function(id){_allIds[id]=true;});});
+  var totalLoaded=Object.keys(_allIds).length;
+  var stopCount=multiStopLoadNum; // stops already confirmed
+  msFinishTrailer(stopCount,totalLoaded);
+}
+function msPreFillSOsForNextStop(){
+  // Re-populate the SO entry fields with the original order SOs
+  if(!Array.isArray(msOrderSOList)||msOrderSOList.length===0)return;
+  var wrap=document.getElementById('soEntriesWrap');
+  if(!wrap)return;
+  wrap.innerHTML='';soEntries=[];
+  msOrderSOList.forEach(function(so,i){
+    addSOEntry();
+    var inp=document.getElementById('soEntry_'+i);
+    if(inp){inp.value=so;inp.dispatchEvent(new Event('input'));}
+  });
+}
+
+function msOpenStopModal(stopNum){
+  msCurrentStop=stopNum;
+  msCurrentPos=null;
+  _msConfirming=false; // reset debounce on new modal open
+  document.getElementById('msStopTitle').textContent='Stop '+stopNum+' — Scan BOL';
+  document.getElementById('msStopSub').textContent='Scan or type the Bill of Lading for stop '+stopNum+'.';
+  document.getElementById('msBolInput').value='';
+  // Show remaining pallets count for stop 2+
+  var remEl=document.getElementById('msStopRemaining');
+  if(remEl){
+    if(stopNum>1&&msOrderTotalCount>0){
+      var _allLdIds={};
+      msLoadedByStop.forEach(function(s){Object.keys(s.loadedIds||{}).forEach(function(id){_allLdIds[id]=true;});});
+      var _ldSoFar=Object.keys(_allLdIds).length;
+      var _rem=msOrderTotalCount-_ldSoFar;
+      remEl.textContent=_rem+' pallets remaining in this trailer';
+      remEl.style.display='block';
+    } else {
+      remEl.style.display='none';
+    }
+  }
+  // Reset position buttons
+  ['NOSE','MIDDLE','TAIL'].forEach(function(p){
+    var btn=document.getElementById('msPos'+p);
+    if(btn){btn.style.background='rgba(255,255,255,.07)';btn.style.borderColor='rgba(255,255,255,.15)';btn.style.color='rgba(255,255,255,.7)';}
+  });
+  var nx=document.getElementById('msPosNext');
+  if(nx)nx.disabled=true;
+  msStep(1);
+  document.getElementById('msStopModal').style.display='flex';
+  setTimeout(function(){var i=document.getElementById('msBolInput');if(i)i.focus();},100);
+}
+
+function msStep(n){
+  document.getElementById('msStep1').style.display=n===1?'block':'none';
+  document.getElementById('msStep2').style.display=n===2?'block':'none';
+  document.getElementById('msStep3').style.display=n===3?'block':'none';
+}
+
+function msNextStep(){
+  var v=document.getElementById('msBolInput').value.trim();
+  if(!v){toast('Enter BOL number','twarn');return;}
+  msStep(2);
+}
+
+function msSkipBOL(){
+  document.getElementById('msBolInput').value='NO-BOL-'+msCurrentStop;
+  msStep(2);
+}
+
+function msSetPos(pos){
+  msCurrentPos=pos;
+  ['NOSE','MIDDLE','TAIL'].forEach(function(p){
+    var btn=document.getElementById('msPos'+p);
+    if(!btn)return;
+    btn.style.background=p===pos?'rgba(245,158,11,.25)':'rgba(255,255,255,.07)';
+    btn.style.borderColor=p===pos?'#f59e0b':'rgba(255,255,255,.15)';
+    btn.style.color=p===pos?'#f59e0b':'rgba(255,255,255,.7)';
+  });
+  var nx=document.getElementById('msPosNext');
+  if(nx)nx.disabled=false;
+}
+
+function msStepToQty(){
+  if(!msCurrentPos){toast('Select a position','twarn');return;}
+  document.getElementById('msQtyInput').value='';
+  msStep(3);
+  setTimeout(function(){var i=document.getElementById('msQtyInput');if(i)i.focus();},80);
+}
+
+function msConfirmStop(){
+  if(_msConfirming)return; // prevent double-fire from Enter+click
+  _msConfirming=true;
+  var bol=document.getElementById('msBolInput').value.trim()||('NO-BOL-'+msCurrentStop);
+  var pos=msCurrentPos;
+  var qty=parseInt(document.getElementById('msQtyInput').value,10);
+  if(!pos){toast('Select a position (NOSE / MIDDLE / TAIL)','twarn');msStep(2);_msConfirming=false;return;}
+  if(!qty||qty<1){toast('Enter a valid qty','twarn');_msConfirming=false;return;}
+  if(!Array.isArray(msStops))msStops=[];
+  // Save or update this stop
+  var existing=msStops.find(function(s){return s.stopNum===msCurrentStop;});
+  if(existing){existing.bol=bol;existing.position=pos;existing.qty=qty;}
+  else{msStops.push({stopNum:msCurrentStop,bol:bol,position:pos,qty:qty,loaded:0});}
+  // Save to bolStops in Master Data (guarded)
+  try{msSaveToMaster();}catch(e){console.warn('[PalletCheck] msSaveToMaster error:',e);}
+  document.getElementById('msStopModal').style.display='none';
+  toast('Stop '+msCurrentStop+' set · '+pos+' · '+qty+' pallets','tinfo');
+  // Update edit chip label
+  var msVal=document.getElementById('liMultiStopVal');
+  if(msVal)msVal.textContent='🔀 Stop '+multiStopLoadNum+' (Edit)';
+  var msChip=document.getElementById('liMultiStopChip');
+  if(msChip)msChip.style.display='flex';
+  // Update sidebar / progress to reflect this stop
+  updProg();updateFooter();
+  // Focus scan input
+  setTimeout(function(){_msConfirming=false;var i=document.getElementById('scan-inp');if(i)i.focus();},100);
+}
+
+function msCheckStopComplete(){
+  // Disabled — stop progression is now driven by Confirm Load button, not by scan count
+  // The new flow: scan freely → press Confirm Load → doConfirm checks _pendingLeft → opens BOL modal for next stop via Start Loading
+}
+
+function msSaveToMaster(){
+  if(!G)return;
+  if(!Array.isArray(msStops)||!msStops.length)return;
+  var rec={
+    type:'bolStops',
+    sid:G.sid||'',
+    trailer:G.trailer||'',
+    loader:G.loader||'',
+    shift:G.shift||'',
+    ts:new Date().toISOString(),
+    stops:msStops.map(function(s){return {stop:s.stopNum,bol:s.bol,position:s.position,qty:s.qty};})
+  };
+  try{pushMaster(rec);}catch(e){console.warn('[PalletCheck] pushMaster error:',e);}
+}
+
+function msOpenEditor(){
+  var list=document.getElementById('msEditList');
+  if(!list)return;
+  if(!msStops||!msStops.length){
+    list.innerHTML='<div style="color:rgba(255,255,255,.4);font-size:12px;">No stops recorded yet.</div>';
+  } else {
+    list.innerHTML=msStops.map(function(s,i){
+      var posColor=s.position==='TAIL'?'#60a5fa':s.position==='NOSE'?'#f87171':'#fbbf24';
+      return '<div style="display:flex;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.08);">'+
+        '<div style="flex:1;">'+
+          '<div style="font-size:12px;font-weight:700;color:#fff;">Stop '+s.stopNum+'</div>'+
+          '<div style="font-size:11px;color:rgba(255,255,255,.5);">BOL# '+s.bol+' · <span style="color:'+posColor+';">'+s.position+'</span> · '+s.qty+' pallets</div>'+
+        '</div>'+
+        '<button onclick="msEditStop('+s.stopNum+')" style="padding:6px 12px;background:rgba(96,165,250,.15);border:1px solid rgba(96,165,250,.3);color:#60a5fa;border-radius:6px;cursor:pointer;font-size:11px;font-weight:700;font-family:var(--sans);">Edit</button>'+
+      '</div>';
+    }).join('');
+  }
+  document.getElementById('msEditModal').style.display='flex';
+}
+
+function msEditStop(stopNum){
+  document.getElementById('msEditModal').style.display='none';
+  setTimeout(function(){msOpenStopModal(stopNum);},100);
+}
 
 function bolSetPosition(pos){
   _bolSelectedPosition=pos;
@@ -2145,29 +2508,64 @@ function startLoad(){
       if(allSOs.indexOf(s)<0&&DB[s]&&DB[s].length>0)allSOs.push(s);
     });
   });
-  var soList=allSOs;
+  // In multi-stop Stop 2+: always use the saved full SO list (avoids partial-validation issues)
+  var soList=(multiStop&&multiStopLoadNum>1&&Array.isArray(msOrderSOList)&&msOrderSOList.length>0)
+    ?msOrderSOList
+    :allSOs;
 
   // Save multi-stop context
   if(multiStop){
     multiStopTrailer=trailer;multiStopDoor=door;
     multiStopLoader=selLoader;multiStopShift=selShift;
+    // Save full SO list and total unique count on first stop only
+    if(multiStopLoadNum===1||!msOrderSOList||msOrderSOList.length===0){
+      msOrderSOList=soList.slice();
+      // Count unique IDs in the full pool (computed after pool build below)
+      // We set msOrderTotalCount after pool is built — see flag below
+    }
   }
-  var loadLabel='Load '+multiStopLoadNum;
+  // Auto-calculate today's load# for this loader from master data
+  var _todayStr=new Date().toLocaleDateString('en-US');
+  var _loaderTodayCount=getMaster().filter(function(x){
+    return x.loader===selLoader&&new Date(x.startTime).toLocaleDateString('en-US')===_todayStr;
+  }).length;
+  var _loaderLoadNum=_loaderTodayCount+1+(multiStop&&multiStopLoadNum>1?multiStopLoadNum-1:0);
+  var loadLabel='Load '+_loaderLoadNum;
 
   // Build unified pallet pool — tag each with its SO
+  // In multi-stop Stop 2+: previously loaded pallets show as LOADED (green) in manifest, new ones as PENDING
+  var _prevLoadedIds={};
+  if(multiStop&&multiStopLoadNum>1&&Array.isArray(msLoadedByStop)){
+    msLoadedByStop.forEach(function(s){
+      Object.keys(s.loadedIds||{}).forEach(function(id){_prevLoadedIds[id]=true;});
+    });
+  }
   var pool=[];
   soList.forEach(function(s){
     (DB[s]||[]).forEach(function(p){
-      pool.push({id:p.id,sku:p.sku,qty:p.qty,lot:p.lot||'',so:s,status:'PENDING',scannedAt:null});
+      var alreadyLoaded=!!_prevLoadedIds[p.id];
+      pool.push({id:p.id,sku:p.sku,qty:p.qty,lot:p.lot||'',so:s,
+        status:alreadyLoaded?'LOADED':'PENDING',
+        scannedAt:alreadyLoaded?new Date():null,
+        _prevStop:alreadyLoaded?true:false});
     });
   });
+
+  // Save total unique pallet count for the full order on Stop 1
+  if(multiStop&&(multiStopLoadNum===1||msOrderTotalCount===0)){
+    var _uniqueIds={};
+    pool.forEach(function(p){if(!p._prevStop)_uniqueIds[p.id]=true;});
+    msOrderTotalCount=Object.keys(_uniqueIds).length;
+  }
 
   var sidVal=document.getElementById('inpBOL')?document.getElementById('inpBOL').value.trim():'';
   G={door:door,trailer:trailer,loader:selLoader,shift:selShift,carga:loadLabel,
      sid:sidVal,
      startTime:new Date(),wrongScans:0,allLog:[],
      soList:soList,curSO:curSO,
-     pallets:pool,scanLog:[]};
+     pallets:pool,scanLog:[],
+     driverCount:_pendingDriverCount||null};
+  _pendingDriverCount=null; // reset after consuming
 
   goView('scan');
   initScan();
@@ -2188,7 +2586,25 @@ function initScan(){
   document.getElementById('chipRow').innerHTML='<span class="chip-empty">No scans yet</span>';
   document.getElementById('result').className='result idle';
   document.getElementById('result').innerHTML='<div class="result-icon">\u2014</div><div><div class="result-title">Last result</div><div class="result-detail">Place pallet under scanner or type ID above</div></div>';
-  setTimeout(function(){document.getElementById('scan-inp').focus();},150);
+  // On mobile: open manifest drawer automatically so loader sees pending pallets
+  if(window.innerWidth<=600){
+    var sb=document.querySelector('.sidebar');
+    if(sb)sb.classList.add('mob-open');
+  }
+  // Show/hide multi-stop edit chip
+  var msChip=document.getElementById('liMultiStopChip');
+  if(msChip)msChip.style.display=multiStop?'flex':'none';
+  if(multiStop){
+    var msVal=document.getElementById('liMultiStopVal');
+    if(msVal)msVal.textContent='🔀 Stop '+(multiStopLoadNum)+' (Edit)';
+  }
+  // Multi-stop: open BOL modal at the start of EVERY stop so loader scans BOL before loading
+  // This fires when loader presses Start Loading — Stop 1 on first entry, Stop 2+ after Confirm Load N
+  if(multiStop){
+    setTimeout(function(){msOpenStopModal(multiStopLoadNum);},300);
+  } else {
+    setTimeout(function(){document.getElementById('scan-inp').focus();},150);
+  }
 }
 
 // ── SO QUEUE ──
@@ -2264,31 +2680,90 @@ function renderManifest(){
       var checkIcon=ld
         ?''  // green checkmark handled by .loaded class
         :'<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.2)" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="m18 2 4 4-10 10H8v-4L18 2z"/></svg>';
+      // ✕ remove button — only on PENDING rows (not on already-loaded pallets)
+      var safePid=pid.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+      var removeBtn=!ld
+        ?'<button class="prow-remove" onclick="event.stopPropagation();removePalletFromManifest(\''+safePid+'\')" title="ID eliminado del sistema">✕</button>'
+        :'';
       rows+='<div class="prow'+(ld?' loaded':'')+(ld?'':' prow-tappable')+'" id="prow'+i+'" '+tapAction+'>'
         +'<div class="prow-num">'+(i+1).toString().padStart(2,'0')+'</div>'
         +'<div class="prow-info"><div class="prow-id">'+pid+'</div><div class="prow-sku">'+skuLine+'</div></div>'
-        +'<div class="prow-check">'+checkIcon+'</div></div>';
+        +'<div class="prow-check">'+checkIcon+'</div>'+removeBtn+'</div>';
     });
   });
   document.getElementById('sbList').innerHTML=rows;
   updProg();
 }
+// Delete a scanned pallet ID (removes all SKU rows for that ID)
+function deletePalletId(pid){
+  if(!G||!G.pallets)return;
+  if(!confirm('¿Eliminar pallet '+pid+' de esta carga?'))return;
+  G.pallets=G.pallets.filter(function(p){return p.id!==pid;});
+  renderManifest();updateKPIs();updateFooter();
+  toast('Pallet '+pid+' eliminado','twarn');
+}
 // Count unique pallet IDs (mix pallets share one ID across multiple SKU rows)
+// In multi-stop: LOADED count only counts pallets loaded THIS stop (not _prevStop carryovers)
 function countUniquePallets(statusFilter){
+  if(!G||!Array.isArray(G.pallets))return 0;
   var seen={};
   G.pallets.forEach(function(p){
-    if(!statusFilter||p.status===statusFilter)seen[p.id]=true;
+    if(!statusFilter||p.status===statusFilter){
+      // Skip pallets carried over from a previous stop (they're LOADED but not by this stop)
+      if(statusFilter==='LOADED'&&p._prevStop)return;
+      seen[p.id]=true;
+    }
   });
   return Object.keys(seen).length;
 }
 function countTotalUnique(){
-  var seen={};G.pallets.forEach(function(p){seen[p.id]=true;});
+  if(!G||!Array.isArray(G.pallets))return 0;
+  var seen={};
+  G.pallets.forEach(function(p){
+    if(!p._prevStop)seen[p.id]=true; // only count this stop's pallets
+  });
   return Object.keys(seen).length;
 }
+// \u2500\u2500 TARGET HELPER \u2500\u2500
+// Priority: 1) driver override  2) current stop qty  3) manifest count
+function getLoadTarget(){
+  if(G&&G.driverCount)return G.driverCount;
+  if(multiStop&&Array.isArray(msStops)&&msStops.length){
+    // In multi-stop, target = qty for the CURRENT stop only
+    var curStop=msStops.find(function(s){return s.stopNum===multiStopLoadNum;});
+    if(curStop&&curStop.qty>0)return curStop.qty;
+    // Fallback: if stop not registered yet, use all pallets in pool
+  }
+  return countTotalUnique();
+}
+// Sum of ALL registered stops (for display/footer info only)
+function getTotalStopsSum(){
+  if(multiStop&&Array.isArray(msStops)&&msStops.length){
+    var sum=0;msStops.forEach(function(s){sum+=s.qty||0;});
+    return sum;
+  }
+  return 0;
+}
+
 function updProg(){
-  var total=countTotalUnique();
   var ld=countUniquePallets('LOADED');
-  document.getElementById('sbProg').innerHTML='<strong>'+ld+'</strong> / '+total+' loaded \u00B7 '+(total-ld)+' remaining';
+  var target=getLoadTarget();
+  var rem=Math.max(0,target-ld);
+  var note='';
+  if(G&&G.driverCount)note=' <span style="font-size:10px;color:#f59e0b;">(driver: '+G.driverCount+')</span>';
+  else if(multiStop&&Array.isArray(msStops)&&msStops.length){
+    var cso2=msStops.find(function(s){return s.stopNum===multiStopLoadNum;});
+    note=' <span style="font-size:10px;color:#60a5fa;">(stop '+multiStopLoadNum+(cso2?': '+cso2.qty:'')+' )</span>';
+  }
+  document.getElementById('sbProg').innerHTML='<strong>'+ld+'</strong> / '+target+' loaded \u00B7 '+rem+' remaining'+note;
+}
+// Remove a specific PENDING pallet by ID (called from \u2715 button on each row)
+function removePalletFromManifest(pid){
+  if(!G||!G.pallets)return;
+  if(!confirm('\u00BFEliminar pallet '+pid+' del manifest?\n(ID fue removido del sistema \u2014 se baja el expected count)')){return;}
+  G.pallets=G.pallets.filter(function(p){return p.id!==pid;});
+  renderManifest();updateKPIs();updateFooter();
+  toast('Pallet '+pid+' eliminado del manifest','twarn');
 }
 function flashProw(i){
   var r=document.getElementById('prow'+i);if(!r)return;
@@ -2300,10 +2775,13 @@ function flashProw(i){
 // ── KPIs ──
 function updateKPIs(){
   var sc=countTotalUnique(),ld=countUniquePallets('LOADED');
-  document.getElementById('kSOTag').textContent=G.curSO;
-  document.getElementById('kTotal').textContent=sc;
+  var target=getLoadTarget();
+  // Show scanned pallet's SO if the last scan belongs to a different SO, else POOL label or curSO
+  var soLabel=G.soList&&G.soList.length>1?'POOL':G.curSO;
+  document.getElementById('kSOTag').textContent=soLabel;
+  document.getElementById('kTotal').textContent=target;
   document.getElementById('kScanned').textContent=ld;
-  document.getElementById('kRemain').textContent=sc-ld;
+  document.getElementById('kRemain').textContent=Math.max(0,target-ld);
   document.getElementById('kMis').textContent=G.wrongScans;
   document.getElementById('kMis').className='kpi-val'+(G.wrongScans>0?' red':'');
   // Load info strip
@@ -2316,25 +2794,36 @@ function updateKPIs(){
   if(sidChip)sidChip.style.display=G.sid?'flex':'none';
   _set('liSID',G.sid,'gold');
   var cargaChip=document.getElementById('liCargaChip');
-  if(cargaChip)cargaChip.style.display=G.carga?'flex':'none';
-  _set('liCarga',G.carga,'');
+  if(cargaChip)cargaChip.style.display='flex';
+  _set('liCarga',G.carga||'1','gold');
 }
 function updateFooter(){
-  var sc=countTotalUnique(),ld=countUniquePallets('LOADED');
-  var pct=sc?Math.round(ld/sc*100):0;
+  var ld=countUniquePallets('LOADED');
+  var target=getLoadTarget();
+  var pct=target?Math.round(ld/target*100):0;
+  if(pct>100)pct=100;
   document.getElementById('fPct').textContent=pct+'%';
   var f=document.getElementById('pbarFill');f.style.width=pct+'%';f.className='pbar-fill'+(pct===100?' done':'');
-  document.getElementById('fRem').innerHTML='<strong>'+(sc-ld)+'</strong> remaining';
+  var rem=Math.max(0,target-ld);
+  var remNote='';
+  if(G&&G.driverCount)remNote=' <span style="font-size:10px;color:#f59e0b;">(driver: '+G.driverCount+')</span>';
+  else if(multiStop&&Array.isArray(msStops)&&msStops.length){
+    var curStopObj=msStops.find(function(s){return s.stopNum===multiStopLoadNum;});
+    var curQty=curStopObj?curStopObj.qty:'?';
+    remNote=' <span style="font-size:10px;color:#60a5fa;">(stop '+multiStopLoadNum+': '+curQty+')</span>';
+  }
+  document.getElementById('fRem').innerHTML='<strong>'+rem+'</strong> remaining'+remNote;
   var btn=document.getElementById('btnConfirm');
   // Pool mode: all pallets in one batch — no "next SO" step
   var loadLbl=multiStop?' · Load '+multiStopLoadNum:'';
   btn.textContent='CONFIRM LOAD'+loadLbl;
   btn.onclick=function(){openModal();};
-  btn.disabled=pct<100;
-  var mobBtn=document.getElementById('mobBtnConfirm');if(mobBtn)mobBtn.disabled=pct<100;
+  var done=ld>=target;
+  btn.disabled=!done;
+  var mobBtn=document.getElementById('mobBtnConfirm');if(mobBtn)mobBtn.disabled=!done;
   // Keep in-flow confirm button in sync
   var cif=document.getElementById('confirmInFlow');
-  if(cif){cif.style.display=(pct===100)?'block':'none';}
+  if(cif){cif.style.display=done?'block':'none';}
 }
 
 // ── SCAN PROCESSING ──
@@ -2343,11 +2832,6 @@ function updateFooter(){
 function manualPickPallet(id){
   var inp=document.getElementById('scan-inp');
   if(!inp)return;
-  // On mobile: collapse manifest first so user sees the scan area
-  if(window.innerWidth<=600){
-    var sb=document.querySelector('.sidebar');
-    if(sb)sb.classList.remove('mob-open');
-  }
   inp.value=id;
   inp.focus();
   // Small delay so user sees the value before it processes
@@ -2389,7 +2873,13 @@ function doScan(val){
     G._lastUnknownId=val;
     flashBox(false);beep(3);
   } else if(matches.every(function(i){return G.pallets[i].status==='LOADED';})){
-    cls='dup';icon='&#x26A0;';title='Duplicate';detail='Pallet '+val+' already scanned this session.';
+    // Check if it was loaded in a previous stop (carryover) vs duplicate scan this stop
+    var isPrevStop=matches.some(function(i){return G.pallets[i]._prevStop;});
+    if(isPrevStop){
+      cls='dup';icon='&#x2714;';title='Already Loaded';detail='Pallet '+val+' was loaded in a previous stop of this trailer.';
+    } else {
+      cls='dup';icon='&#x26A0;';title='Duplicate';detail='Pallet '+val+' already scanned this session.';
+    }
     flashBox(false);beep(2);
   } else{
     // Mark ALL rows with this ID as LOADED (mix pallet support)
@@ -2420,8 +2910,12 @@ function doScan(val){
   rc.innerHTML='<div class="result-icon">'+icon+'</div><div><div class="result-title">'+title+'</div><div class="result-detail"><span class="result-pid">'+val+'</span> \u2014 '+detail+'</div></div>'
     +(cls==='bad'&&!ownerSO?'<div style="margin-top:10px;"><button onclick="quickAddUnknownPallet(\''+val.replace(/'/g,"\\'")+'\')" style="background:#e67e22;color:#fff;border:none;padding:10px 22px;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;letter-spacing:.5px;">\u2795 Add to Load</button><div style="font-size:11px;color:rgba(255,255,255,.55);margin-top:5px;">Physical BOL updated \u2014 add with note</div></div>':'');
   addChip(val,cls);updateKPIs();updateFooter();
-  if(cls==='ok'&&G.pallets.every(function(p){return p.status==='LOADED';})){
-    renderQueue(); // refresh queue chips when all done
+  if(cls==='ok'){
+    if(G.pallets.every(function(p){return p.status==='LOADED';})){
+      renderQueue(); // refresh queue chips when all done
+    }
+    // Multi-stop: check if current stop qty is reached
+    msCheckStopComplete();
   }
 }
 
@@ -2529,15 +3023,34 @@ function addChip(id,cls){
 // ── MODAL ──
 function openModal(){
   if(!G)return;
-  var ld=G.pallets.filter(function(p){return p.status==='LOADED';}).length;
-  var miss=G.pallets.filter(function(p){return p.status==='PENDING';});
-  var el=Math.round((new Date()-G.startTime)/60000),ok=miss.length===0;
+  var _uiq=function(arr){var ids={};arr.forEach(function(p){ids[p.id]=true;});return Object.keys(ids).length;};
+  var ld=_uiq(G.pallets.filter(function(p){return p.status==='LOADED';}));
+  var target=getLoadTarget(); // use stops sum or driver override, not raw manifest
+  // In multi-stop: only flag as missing pallets from stops that have been registered
+  var miss=[];var missIds={};
+  if(multiStop&&Array.isArray(msStops)&&msStops.length){
+    // Only show PENDING pallets up to the target qty \u2014 extras in manifest beyond stops are not "missing"
+    var pendingAll=G.pallets.filter(function(p){return p.status==='PENDING';});
+    // Dedupe by id
+    pendingAll.forEach(function(p){if(!missIds[p.id]){missIds[p.id]=true;miss.push(p);}});
+    // Trim to only what's actually expected missing (target - loaded)
+    var actualMissing=Math.max(0,target-ld);
+    miss=miss.slice(0,actualMissing);
+  } else {
+    G.pallets.forEach(function(p){if(p.status==='PENDING'&&!missIds[p.id]){missIds[p.id]=true;miss.push(p);}});
+  }
+  var el=Math.round((new Date()-G.startTime)/60000),ok=ld>=target;
   function mr(k,v,c){return '<div class="mrow"><span class="mk">'+k+'</span><span class="mv '+(c||'')+'" >'+v+'</span></div>';}
+  var stopsNote='';
+  if(multiStop&&Array.isArray(msStops)&&msStops.length){
+    var csObj=msStops.find(function(s){return s.stopNum===multiStopLoadNum;});
+    stopsNote=' <span style="font-size:10px;color:#60a5fa;">(stop '+multiStopLoadNum+(csObj?' of '+msStops.length+': '+csObj.qty+'':'')+' )</span>';
+  }
   document.getElementById('modalSumm').innerHTML=
     mr('Door',G.door)+mr('Trailer',G.trailer,'gold')+
     mr('Sales Order',(G.soList&&G.soList.length>1?G.soList.join(' + '):G.curSO))+
     mr('Load #',G.carga,'gold')+mr('Loader',G.loader)+mr('Shift',G.shift)+mr('Duration',el+' min')+
-    mr('Pallets',ld+' / '+G.pallets.length,ld===G.pallets.length?'ok':'warn')+
+    mr('Pallets',ld+' / '+target+(stopsNote),ok?'ok':'warn')+
     mr('Wrong scans',G.wrongScans,G.wrongScans?'bad':'ok')+
     mr('Result',ok?'\u2714 COMPLETE':'\u26A0 PARTIAL',ok?'ok':'warn');
   var mb=document.getElementById('missBox');
@@ -2554,15 +3067,18 @@ document.getElementById('modal-overlay').addEventListener('click',function(e){if
 function doConfirm(){
   if(!G)return;
   closeModal();
-  var ld=G.pallets.filter(function(p){return p.status==='LOADED';}).length;
-  var miss2=G.pallets.filter(function(p){return p.status==='PENDING';}).length;
-  var res=ld===G.pallets.length?'COMPLETE':'PARTIAL';
+  // Count unique pallet IDs (not SKU rows — mix pallets have multiple rows with same id)
+  var _uniqIds=function(arr){var ids={};arr.forEach(function(p){ids[p.id]=true;});return Object.keys(ids).length;};
+  var ld=_uniqIds(G.pallets.filter(function(p){return p.status==='LOADED';}));
+  var miss2=_uniqIds(G.pallets.filter(function(p){return p.status==='PENDING';}));
+  var totalPals=getLoadTarget(); // use stops sum or driver override
+  var res=ld>=totalPals?'COMPLETE':'PARTIAL';
   var mid=pushMaster({
     sid:G.sid||'',
     door:G.door,trailer:G.trailer,order:G.curSO,
     carga:G.carga,loader:G.loader,shift:G.shift,
     startTime:G.startTime,endTime:new Date(),
-    loaded:ld,total:G.pallets.length,wrongScans:G.wrongScans,
+    loaded:ld,total:totalPals,wrongScans:G.wrongScans,
     result:res,
     confirmLog:G.confirmLog||[],
     multiStop:multiStop||false,
@@ -2637,14 +3153,79 @@ function doConfirm(){
       else{toast('SharePoint save failed ('+r.status+') \u2014 local record kept','twarn');}
     }).catch(function(){toast('SharePoint offline \u2014 local record kept','twarn');});
   })({startTime:G.startTime,door:G.door,trailer:G.trailer,sid:G.sid||'',order:G.curSO,carga:G.carga,
-      loader:G.loader,shift:G.shift,total:G.pallets.length,loaded:ld,result:res,
+      loader:G.loader,shift:G.shift,total:totalPals,loaded:ld,result:res,
       wrongScans:G.wrongScans,confirmLog:G.confirmLog||[],pallets:G.pallets.slice(),
       bolStops:(_bolScans&&_bolScans.length)?_bolScans.slice():[]});
   toast('\u2713 Load '+mid+' saved \u2014 '+getMaster().length+' total records','tok');
-  G=null;
 
   if(multiStop){
-    // Multi-stop: increment load number, pre-fill trailer/door/loader/shift, clear only SO
+    // Save loaded IDs BEFORE clearing G — only NEW pallets loaded THIS stop (not _prevStop carryovers)
+    var _loadedIds={};
+    G.pallets.forEach(function(p){if(p.status==='LOADED'&&!p._prevStop)_loadedIds[p.id]=true;});
+    if(!Array.isArray(msLoadedByStop))msLoadedByStop=[];
+    msLoadedByStop.push({stopNum:multiStopLoadNum,loadedIds:_loadedIds});
+    var _doneStopNum=multiStopLoadNum;
+    G=null;
+
+    // Count total loaded across all stops so far
+    // Count total unique IDs loaded across all stops
+    var _allLoadedIds={};
+    msLoadedByStop.forEach(function(s){Object.keys(s.loadedIds||{}).forEach(function(id){_allLoadedIds[id]=true;});});
+    var _totalLoaded=Object.keys(_allLoadedIds).length;
+    // Use saved total count (unique IDs in full order, set at Stop 1)
+    var _totalInOrder=msOrderTotalCount>0?msOrderTotalCount:_totalLoaded;
+    var _pendingLeft=_totalInOrder-_totalLoaded;
+
+    if(_pendingLeft<=0){
+      // Order complete \u2014 auto-finish
+      msFinishTrailer(_doneStopNum,_totalLoaded);
+    } else {
+      // Still pallets remaining \u2014 open BOL modal for next stop directly
+      multiStopLoadNum++;
+      goView('setup');yardPulse();
+      document.getElementById('inpDoor').value=multiStopDoor;
+      document.getElementById('inpTrailer').value=multiStopTrailer;
+      document.getElementById('inpSO').value='';
+      document.getElementById('soHint').style.display='none';
+      document.getElementById('soOrderInfo').style.display='none';
+      document.getElementById('linkedSection').style.display='none';
+      selLoader=multiStopLoader;
+      var _loaders=getLoaders();
+      var _ldr=_loaders.find(function(l){return l.name===multiStopLoader;})||{name:multiStopLoader,av:multiStopLoader.charAt(0)};
+      document.getElementById('loaderInp').style.display='none';
+      var _sel=document.getElementById('loaderSel');_sel.classList.add('on');
+      document.getElementById('selAv').textContent=_ldr.av||_ldr.name.charAt(0);
+      document.getElementById('selName').textContent=_ldr.name;
+      selShift=multiStopShift;
+      document.querySelectorAll('.shift-opt').forEach(function(b){
+        var sn=b.querySelector('.shift-name');
+        if(sn&&multiStopShift&&multiStopShift.toLowerCase().startsWith(sn.textContent.toLowerCase().replace('st','').replace('nd','').replace('rd','')))b.classList.add('on');
+        else b.classList.remove('on');
+      });
+      syncFinishBtn();
+      // Re-populate SO entries so pool builder picks them up with exclusion filter
+      msPreFillSOsForNextStop();
+      toast('Stop '+_doneStopNum+' done \u2014 '+_pendingLeft+' pallets remaining \u00b7 Scan BOL for Stop '+multiStopLoadNum,'tinfo');
+    }
+  } else {
+    G=null;
+    // Single load: full reset
+    ['inpDoor','inpTrailer','inpSO'].forEach(function(id){document.getElementById(id).value='';});
+    document.getElementById('soHint').style.display='none';
+    document.getElementById('soOrderInfo').style.display='none';
+    document.getElementById('linkedSection').style.display='none';
+    clearLoader();selShift='';selCarga='';
+    document.querySelectorAll('.shift-opt').forEach(function(b){b.classList.remove('on');});
+    multiStopLoadNum=1;
+    goView('setup');yardPulse();
+  }
+}
+
+// ── NEXT STOP ANSWER ──
+function msNextStopAnswer(hasMore){
+  document.getElementById('msNextStopModal').style.display='none';
+  if(hasMore){
+    // Continue to next stop
     multiStopLoadNum++;
     goView('setup');yardPulse();
     // Pre-fill persistent fields
@@ -2656,7 +3237,8 @@ function doConfirm(){
     document.getElementById('linkedSection').style.display='none';
     // Restore loader
     selLoader=multiStopLoader;
-    var loaders=getLoaders();var ldr=loaders.find(function(l){return l.name===multiStopLoader;})||{name:multiStopLoader,av:multiStopLoader.charAt(0)};
+    var loaders=getLoaders();
+    var ldr=loaders.find(function(l){return l.name===multiStopLoader;})||{name:multiStopLoader,av:multiStopLoader.charAt(0)};
     document.getElementById('loaderInp').style.display='none';
     var sel=document.getElementById('loaderSel');sel.classList.add('on');
     document.getElementById('selAv').textContent=ldr.av||ldr.name.charAt(0);
@@ -2664,28 +3246,28 @@ function doConfirm(){
     // Restore shift
     selShift=multiStopShift;
     document.querySelectorAll('.shift-opt').forEach(function(b){
-      var st=b.querySelector('.shift-time');
-      if(st&&(st.textContent===multiStopShift+'t'||b.querySelector('.shift-name')&&b.querySelector('.shift-name').textContent.toLowerCase()===multiStopShift.toLowerCase().replace('st','').replace('nd','').replace('rd',''))){}
-    });
-    // Re-activate correct shift button
-    document.querySelectorAll('.shift-opt').forEach(function(b){
       var sn=b.querySelector('.shift-name');
       if(sn&&multiStopShift&&multiStopShift.toLowerCase().startsWith(sn.textContent.toLowerCase().replace('st','').replace('nd','').replace('rd','')))b.classList.add('on');
       else b.classList.remove('on');
     });
     setTimeout(function(){document.getElementById('inpSO').focus();},200);
     syncFinishBtn();
-    toast('\u2713 Load '+(multiStopLoadNum-1)+' done \u2014 Trailer locked to '+multiStopTrailer+' \u00b7 Enter next SO','tinfo');
+    toast('Stop '+(multiStopLoadNum-1)+' done — Scan BOL for Stop '+multiStopLoadNum,'tinfo');
   } else {
-    // Single load: full reset
+    // No more stops — full reset
+    var totalLoaded=msLoadedByStop.reduce(function(acc,s){return acc+Object.keys(s.loadedIds).length;},0);
+    var stopCount=multiStopLoadNum;
+    var trailerLabel=multiStopTrailer;
+    multiStop=false;multiStopLoadNum=1;msStops=[];msLoadedByStop=[];
+    _pendingDriverCount=null;
     ['inpDoor','inpTrailer','inpSO'].forEach(function(id){document.getElementById(id).value='';});
     document.getElementById('soHint').style.display='none';
     document.getElementById('soOrderInfo').style.display='none';
     document.getElementById('linkedSection').style.display='none';
     clearLoader();selShift='';selCarga='';
     document.querySelectorAll('.shift-opt').forEach(function(b){b.classList.remove('on');});
-    multiStopLoadNum=1;
     goView('setup');yardPulse();
+    toast('✓ Trailer '+trailerLabel+' complete — '+stopCount+' stops · '+totalLoaded+' pallets loaded','tok');
   }
 }
 
@@ -3322,8 +3904,9 @@ function ovConfirmLoadAndFinish(){
 // --- Confirm Load ---
 function ovConfirmLoad(){
   if(!G||!G.pallets){toast('Start a session first.','twarn');return;}
-  var expected=G.pallets.length;
-  var scannedCount=G.pallets.filter(function(p){return p.status==='LOADED';}).length;
+  var _ui=function(arr){var ids={};arr.forEach(function(p){ids[p.id]=true;});return Object.keys(ids).length;};
+  var expected=_ui(G.pallets);
+  var scannedCount=_ui(G.pallets.filter(function(p){return p.status==='LOADED';}));
   if(expected===0||scannedCount===expected){
     document.getElementById('ovConfirmOKSub').textContent=
       scannedCount+' pallets escaneados. Carga confirmada por el driver.';
@@ -3366,8 +3949,9 @@ function ovConfirmLoad(){
 
 function ovMismatchChoose(type){
   ovModalClose('ovMismatchModal');
-  var expected=G&&G.pallets?G.pallets.length:0;
-  var scannedCount=G&&G.pallets?G.pallets.filter(function(p){return p.status==='LOADED';}).length:0;
+  var _ui2=function(arr){var ids={};arr.forEach(function(p){ids[p.id]=true;});return Object.keys(ids).length;};
+  var expected=G&&G.pallets?_ui2(G.pallets):0;
+  var scannedCount=G&&G.pallets?_ui2(G.pallets.filter(function(p){return p.status==='LOADED';})):0;
   var msg='';
   if(type==='APP_MORE'){
     msg='Driver confirmed: app shows more than physical. App: '+expected+' | Physical: '+scannedCount+'. Data discrepancy recorded.';
@@ -3396,22 +3980,19 @@ function _logConfirm(type,scanned,expected){
 
 // --- Back / Cancel ---
 function ovBack(){
-  // Go back to setup/home view
-  if(typeof goView==='function'){goView('home');}
-  G=null;
+  // Go back to setup — session (G) is preserved so loader can resume
+  if(typeof goView==='function'){goView('setup');}
+  // G intentionally NOT cleared — loader can tap Active Load to resume
 }
 
 function ovCancel(){
-  if(!G||!G.pallets){return;}
-  if(!confirm('Cancel current scanning session? All progress will be lost.'))return;
-  G.pallets=G.pallets.filter(function(p){return !p._driverOverride;});
-  G.pallets.forEach(function(p){p.status='PENDING';p.scannedAt=null;});
-  G.wrongScans=0;G.allLog=[];G.scanLog=[];
-  if(typeof refreshKPIs==='function')refreshKPIs();
-  if(typeof renderManifest==='function')renderManifest();
-  var res=document.getElementById('result');
-  if(res)res.className='result idle';
-  toast('Session cancelled — pallets reset','twarn');
+  // Cancel wipes the session completely
+  if(!confirm('¿Cancelar esta carga? Todo el progreso se perderá.'))return;
+  G=null;
+  multiStop=false;multiStopLoadNum=1;msStops=[];msLoadedByStop=[];
+  _pendingDriverCount=null;
+  if(typeof goView==='function'){goView('setup');}
+  toast('Carga cancelada','twarn');
 }
 
 </script>
