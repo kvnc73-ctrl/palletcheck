@@ -288,8 +288,11 @@ nav{
   .sb-progress{font-size:12px;}
 
   /* Scan panel fills remaining space */
-  .scan-panel{flex:1;display:flex;flex-direction:column;min-height:0;overflow:hidden;}
-  .scan-main{flex:1;overflow-y:auto;}
+  .scan-panel{flex:1;display:flex;flex-direction:column;min-height:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;}
+  .scan-main{flex:none;}
+  /* Keep action bar and footer always visible at bottom */
+  .mob-action-bar{position:sticky;bottom:0;z-index:30;flex-shrink:0;}
+  .footer{position:sticky;bottom:0;z-index:29;flex-shrink:0;}
 
   /* KPI bar — horizontal scroll strip */
   .kpi-bar{
@@ -1237,8 +1240,8 @@ tbody td{padding:10px 16px;font-size:12px;color:var(--t1);}
         <div class="scan-lbl">Scan pallet barcode</div>
         <div class="live-badge">LIVE</div>
       </div>
-      <div class="scan-input-wrap" id="scanWrap" onclick="document.getElementById('scan-inp').focus()">
-        <input id="scan-inp" placeholder="Awaiting scan..." autocomplete="off" autocorrect="off" spellcheck="false">
+      <div class="scan-input-wrap" id="scanWrap" onclick="var si=document.getElementById('scan-inp');si.inputMode='text';si.focus();">
+        <input id="scan-inp" placeholder="Awaiting scan..." autocomplete="off" autocorrect="off" spellcheck="false" inputmode="none">
       </div>
       <div class="result idle" id="result">
         <div class="result-icon">&mdash;</div>
@@ -1478,7 +1481,7 @@ tbody td{padding:10px 16px;font-size:12px;color:var(--t1);}
     </div>
     <div class="modal-btns">
       <button class="btn-back" onclick="closeModal()">&#x2190; Go Back</button>
-      <button class="btn-save" onclick="doConfirm()">CONFIRM &amp; SAVE TO MASTER</button>
+      <button class="btn-save" id="btnModalSave" onclick="doConfirm()">CONFIRM &amp; SAVE TO MASTER</button>
     </div>
   </div>
 </div>
@@ -2132,7 +2135,11 @@ function msFinishTrailer(stopCount,totalLoaded){
   var _savedLoader=selLoader;var _savedShift=selShift;
   multiStop=false;multiStopLoadNum=1;msStops=[];msLoadedByStop=[];msOrderSOList=[];msOrderTotalCount=0;
   _pendingDriverCount=null;
-  ['inpDoor','inpTrailer','inpSO'].forEach(function(id){document.getElementById(id).value='';});
+  var _dInp=document.getElementById('inpDoor');if(_dInp)_dInp.value='';
+  var _tInp=document.getElementById('inpTrailer');if(_tInp)_tInp.value='';
+  // Reset SO entries wrap
+  var _soWrap=document.getElementById('soEntriesWrap');
+  if(_soWrap){_soWrap.innerHTML='';soEntries=[];addSOEntry();}
   document.getElementById('soHint').style.display='none';
   document.getElementById('soOrderInfo').style.display='none';
   document.getElementById('linkedSection').style.display='none';
@@ -2149,8 +2156,8 @@ function msFinishTrailer(stopCount,totalLoaded){
     var sn=b.querySelector('.shift-name');
     b.classList.toggle('on',sn&&sn.textContent.trim()===_savedShift);
   });
+  goView('setup');yardPulse();
   toast('✓ Trailer '+trailerLabel+' complete — '+stopCount+' stops · '+totalLoaded+' pallets loaded','tok');
-  setTimeout(function(){goView('setup');yardPulse();},1200);
 }
 function msDoneByLoader(){
   // Loader tapped X on BOL modal — finish trailer with what was loaded
@@ -2902,7 +2909,10 @@ function manualPickPallet(id){
 
 function doScan(val){
   if(!G||!val)return;
-  document.getElementById('scan-inp').value='';
+  var _si=document.getElementById('scan-inp');
+  _si.value='';
+  // On mobile: hide keyboard after scan, re-enable on tap
+  if(window.innerWidth<=700){_si.inputMode='none';_si.blur();}
   // Find ALL pallets with this ID (mix pallets share one ID across multiple rows)
   var matches=[],firstIdx=-1;
   var valU=val.toUpperCase();
@@ -3133,11 +3143,56 @@ function openModal(){
   // Final stop (or single load): show Done & Save modal
   document.querySelector('#modal-overlay .modal-title').textContent='DONE & SAVE ✓';
   document.querySelector('#modal-overlay .modal-sub').textContent='Review and save. Trailer load will be marked complete.';
-  document.querySelector('#modal-overlay .btn-save').textContent='DONE & SAVE TO MASTER';
+  var _btnSave=document.getElementById('btnModalSave');
+  _btnSave.textContent='DONE & SAVE TO MASTER';
+  _btnSave.onclick=function(){doConfirmFinal();};
   document.getElementById('modal-overlay').classList.add('open');
 }
 function closeModal(){document.getElementById('modal-overlay').classList.remove('open');}
 document.getElementById('modal-overlay').addEventListener('click',function(e){if(e.target===this)closeModal();});
+
+// ── CONFIRM FINAL (from Done & Save modal) → always goes to setup ──
+function doConfirmFinal(){
+  if(!G)return;
+  closeModal();
+  var _uniqIds=function(arr){var ids={};arr.forEach(function(p){ids[p.id]=true;});return Object.keys(ids).length;};
+  var ld=_uniqIds(G.pallets.filter(function(p){return p.status==='LOADED';}));
+  var totalPals=getLoadTarget();
+  var res=ld>=totalPals?'COMPLETE':'PARTIAL';
+  pushMaster({
+    sid:G.sid||'',door:G.door,trailer:G.trailer,order:G.curSO,
+    carga:G.carga,loader:G.loader,shift:G.shift,
+    startTime:G.startTime,endTime:new Date(),
+    loaded:ld,total:totalPals,wrongScans:G.wrongScans,
+    result:res,confirmLog:G.confirmLog||[],
+    multiStop:multiStop||false,
+    bolStops:(_bolScans&&_bolScans.length)?_bolScans.slice():[],
+    pallets:G.pallets.slice(),scanLog:(G.allLog||[]).slice()
+  });
+  toast('✓ Load saved — '+getMaster().length+' total records','tok');
+  // Save loader & shift
+  var _svL=selLoader;var _svS=selShift;
+  // Full reset
+  G=null;multiStop=false;multiStopLoadNum=1;msStops=[];msLoadedByStop=[];msOrderSOList=[];msOrderTotalCount=0;
+  _pendingDriverCount=null;_bolScans=[];
+  var _dI=document.getElementById('inpDoor');if(_dI)_dI.value='';
+  var _tI=document.getElementById('inpTrailer');if(_tI)_tI.value='';
+  var _soW=document.getElementById('soEntriesWrap');
+  if(_soW){_soW.innerHTML='';soEntries=[];addSOEntry();}
+  document.getElementById('soHint').style.display='none';
+  document.getElementById('soOrderInfo').style.display='none';
+  document.getElementById('linkedSection').style.display='none';
+  selCarga='';
+  // Restore loader & shift
+  selLoader=_svL;
+  var _lInp=document.getElementById('loaderInp');if(_lInp)_lInp.value=_svL||'';
+  var _lSel=document.getElementById('loaderSel');if(_lSel)_lSel.classList.toggle('on',!!_svL);
+  selShift=_svS;
+  document.querySelectorAll('.shift-opt').forEach(function(b){
+    var sn=b.querySelector('.shift-name');b.classList.toggle('on',sn&&sn.textContent.trim()===_svS);
+  });
+  goView('setup');yardPulse();
+}
 
 // ── CONFIRM → MASTER ──
 function doConfirm(){
@@ -3264,7 +3319,10 @@ function doConfirm(){
     G=null;
     // Single load: reset all except loader & shift
     var _svLoader=selLoader;var _svShift=selShift;
-    ['inpDoor','inpTrailer','inpSO'].forEach(function(id){document.getElementById(id).value='';});
+    var _dI=document.getElementById('inpDoor');if(_dI)_dI.value='';
+    var _tI=document.getElementById('inpTrailer');if(_tI)_tI.value='';
+    var _soW=document.getElementById('soEntriesWrap');
+    if(_soW){_soW.innerHTML='';soEntries=[];addSOEntry();}
     document.getElementById('soHint').style.display='none';
     document.getElementById('soOrderInfo').style.display='none';
     document.getElementById('linkedSection').style.display='none';
