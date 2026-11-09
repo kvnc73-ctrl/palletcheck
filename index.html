@@ -266,8 +266,10 @@ nav{
 
 /* ── MOBILE / SCANNER layout ── */
 @media(max-width:700px){
-  #vScan{flex-direction:column;display:flex;}
-  /* On mobile vScan is column: sidebar → scan-panel (scrolls) → footer (fixed height) */
+  /* Allow the scan view to be taller than screen so user can scroll to footer */
+  #views{overflow-y:auto;overflow-x:hidden;}
+  #vScan{flex-direction:column;display:flex;height:auto;min-height:calc(100% + 80px);overflow:visible;}
+  /* On mobile vScan is taller than viewport — user scrolls down to reach footer */
 
   /* Sidebar — collapses to a tap-to-expand manifest drawer */
   .sidebar{
@@ -289,12 +291,9 @@ nav{
   .sb-title{font-size:18px;}
   .sb-progress{font-size:12px;}
 
-  /* Scan panel fills remaining space — NO overflow here, children handle it */
-  .scan-panel{flex:1;display:flex;flex-direction:column;min-height:0;overflow:hidden;}
-  /* scan-main scrolls, kpi-bar and mob-action-bar shrink, footer stays fixed below */
-  .scan-main{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;min-height:0;}
-  .kpi-bar{flex-shrink:0;}
-  .mob-action-bar{flex-shrink:0;}
+  /* Scan panel — no internal scroll, page itself scrolls */
+  .scan-panel{flex:1;display:flex;flex-direction:column;overflow:visible;}
+  .scan-main{overflow:visible;}
   /* Keep action bar always visible at bottom */
   .mob-action-bar{position:sticky;bottom:0;z-index:30;flex-shrink:0;}
 
