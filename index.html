@@ -342,20 +342,19 @@ nav{
   .mob-btn.mb-back{background:rgba(255,255,255,.08);color:rgba(255,255,255,.55);border:1px solid rgba(255,255,255,.12);}
   .mob-btn.mb-cancel{background:rgba(239,68,68,.15);color:#fca5a5;border:1px solid rgba(239,68,68,.3);}
 
-  /* Footer — fixed at very bottom, always on top of Android nav bar */
+  /* Footer — sticky at bottom of scan-panel on mobile */
   .footer{
-    position:fixed !important;
-    bottom:0 !important;
-    bottom:env(safe-area-inset-bottom, 0px) !important;
-    left:0;right:0;
-    z-index:999;
+    position:sticky;
+    bottom:0;
+    z-index:30;
     padding:6px 10px;
     padding-bottom:max(6px, env(safe-area-inset-bottom, 6px));
     gap:6px;
     min-height:48px;
+    flex-shrink:0;
   }
-  /* Push scan-main content up so footer doesn't cover last item */
-  .scan-panel{padding-bottom:calc(52px + env(safe-area-inset-bottom, 0px));}
+  /* No extra padding needed — footer is in the flow now */
+  .scan-panel{padding-bottom:0;}
   .btn-confirm{display:block !important;font-size:11px;padding:10px 12px;white-space:nowrap;}
   .pct-num{font-size:14px;}
 
@@ -1283,6 +1282,15 @@ tbody td{padding:10px 16px;font-size:12px;color:var(--t1);}
     </div>
     </div><!-- /scan-main -->
 
+    <!-- Progress bar footer — inside scan-panel so it's visible on desktop and mobile -->
+    <div class="footer" id="scanFooter" style="display:none;">
+      <span class="pct-num" id="fPct">0%</span>
+      <div class="pbar"><div class="pbar-fill" id="pbarFill"></div></div>
+      <span class="remain-txt" id="fRem"></span>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.3)" stroke-width="1.5"><rect x="1" y="3" width="15" height="13"/><path d="m16 8 5 0 3 4v4h-8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+      <button class="btn-confirm" id="btnConfirm" onclick="openModal()" disabled>CONFIRM LOAD</button>
+    </div>
+
   </div><!-- /scan-panel -->
 </div><!-- /vScan -->
 
@@ -1478,14 +1486,6 @@ tbody td{padding:10px 16px;font-size:12px;color:var(--t1);}
 
 </div><!-- #views -->
 
-<!-- Footer lives outside all views — fixed to bottom, only shown in scan view -->
-<div class="footer" id="scanFooter" style="display:none;">
-  <span class="pct-num" id="fPct">0%</span>
-  <div class="pbar"><div class="pbar-fill" id="pbarFill"></div></div>
-  <span class="remain-txt" id="fRem"></span>
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.3)" stroke-width="1.5"><rect x="1" y="3" width="15" height="13"/><path d="m16 8 5 0 3 4v4h-8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
-  <button class="btn-confirm" id="btnConfirm" onclick="openModal()" disabled>CONFIRM LOAD</button>
-</div>
 
 </div><!-- #app -->
 
@@ -3304,6 +3304,9 @@ document.getElementById('modal-overlay').addEventListener('click',function(e){if
 function doConfirmFinal(){
   if(!G)return;
   closeModal();
+  // Multi-stop final stop: route through doConfirm() which calls msFinishTrailer()
+  // That saves the consolidated 9-pallet record. Don't save here — doConfirm handles it.
+  if(multiStop){doConfirm();return;}
   var _uniqIds=function(arr){var ids={};arr.forEach(function(p){ids[p.id]=true;});return Object.keys(ids).length;};
   var ld=_uniqIds(G.pallets.filter(function(p){return p.status==='LOADED';}));
   var totalPals=getLoadTarget();
@@ -3314,7 +3317,7 @@ function doConfirmFinal(){
     startTime:G.startTime,endTime:new Date(),
     loaded:ld,total:totalPals,wrongScans:G.wrongScans,
     result:res,confirmLog:G.confirmLog||[],
-    multiStop:multiStop||false,
+    multiStop:false,
     bolStops:(_bolScans&&_bolScans.length)?_bolScans.slice():[],
     pallets:G.pallets.slice(),scanLog:(G.allLog||[]).slice()
   });
