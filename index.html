@@ -3147,8 +3147,18 @@ function openModal(){
     if(!_isFinal){doConfirm();return;}
   }
   var _uiq=function(arr){var ids={};arr.forEach(function(p){ids[p.id]=true;});return Object.keys(ids).length;};
-  var ld=_uiq(G.pallets.filter(function(p){return p.status==='LOADED';}));
-  var target=getLoadTarget(); // use stops sum or driver override, not raw manifest
+  // In multi-stop final modal: count ALL loaded pallets across all stops
+  var ld;
+  if(multiStop&&Array.isArray(msLoadedByStop)&&msLoadedByStop.length){
+    var _allFinalIds={};
+    msLoadedByStop.forEach(function(s){Object.keys(s.loadedIds||{}).forEach(function(id){_allFinalIds[id]=true;});});
+    G.pallets.forEach(function(p){if(p.status==='LOADED'&&!p._prevStop)_allFinalIds[p.id]=true;});
+    ld=Object.keys(_allFinalIds).length;
+  } else {
+    ld=_uiq(G.pallets.filter(function(p){return p.status==='LOADED';}));
+  }
+  // In multi-stop final modal: target = sum of ALL stops; single load: use getLoadTarget()
+  var target=(multiStop&&getTotalStopsSum()>0)?getTotalStopsSum():(G.driverCount||getLoadTarget());
   // In multi-stop: only flag as missing pallets from stops that have been registered
   var miss=[];var missIds={};
   if(multiStop&&Array.isArray(msStops)&&msStops.length){
@@ -3166,8 +3176,20 @@ function openModal(){
   function mr(k,v,c){return '<div class="mrow"><span class="mk">'+k+'</span><span class="mv '+(c||'')+'" >'+v+'</span></div>';}
   var stopsNote='';
   if(multiStop&&Array.isArray(msStops)&&msStops.length){
-    var csObj=msStops.find(function(s){return s.stopNum===multiStopLoadNum;});
-    stopsNote=' <span style="font-size:10px;color:#60a5fa;">(stop '+multiStopLoadNum+(csObj?' of '+msStops.length+': '+csObj.qty+'':'')+' )</span>';
+    // Show per-stop breakdown: Load 1: X/X \u00b7 Load 2: Y/Y
+    var stopBreakdown=msStops.map(function(s,i){
+      var stopLd=0;
+      if(i<msStops.length-1&&msLoadedByStop[i]){
+        stopLd=Object.keys(msLoadedByStop[i].loadedIds||{}).length;
+      } else {
+        // Last stop: current pallets
+        var _curIds={};
+        G.pallets.forEach(function(p){if(p.status==='LOADED'&&!p._prevStop)_curIds[p.id]=true;});
+        stopLd=Object.keys(_curIds).length;
+      }
+      return 'Load '+s.stopNum+': '+stopLd+'/'+s.qty;
+    }).join(' \u00b7 ');
+    stopsNote=' <span style="font-size:10px;color:#60a5fa;">('+stopBreakdown+')</span>';
   }
   document.getElementById('modalSumm').innerHTML=
     mr('Door',G.door)+mr('Trailer',G.trailer,'gold')+
