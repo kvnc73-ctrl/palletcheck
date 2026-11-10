@@ -2166,10 +2166,96 @@ var msOrderTotalCount=0; // unique pallet IDs in the full order (set at Stop 1 p
 // ── MULTI-STOP HELPERS ──
 function msFinishTrailer(stopCount,totalLoaded){
   var trailerLabel=multiStopTrailer;
+  // ── CONSOLIDATED MASTER RECORD ──
+  // Build complete pallet list: previous stops from msLoadedByStop, current stop from G.pallets
+  var _allPallets=[];
+  if(G&&G.pallets){
+    // Collect all pallets (prev stops marked _prevStop:true + current stop)
+    // Force status = LOADED for all pallets in loaded IDs
+    var _allIds={};
+    msLoadedByStop.forEach(function(s){Object.keys(s.loadedIds||{}).forEach(function(id){_allIds[id]=true;});});
+    G.pallets.forEach(function(p){if(p.status==='LOADED'&&!p._prevStop)_allIds[p.id]=true;});
+    // Rebuild pallets with correct LOADED status
+    G.pallets.forEach(function(p){
+      var pc=JSON.parse(JSON.stringify(p));
+      pc.status=_allIds[p.id]?'LOADED':'PENDING';
+      _allPallets.push(pc);
+    });
+  }
+  var _consolidatedTotal=msStops.reduce(function(a,s){return a+s.qty;},0)||totalLoaded;
+  var _consolidatedSOs=(msOrderSOList&&msOrderSOList.length)?msOrderSOList.join(', '):(G&&G.curSO?G.curSO:'');
+  var _consolidatedBOLs=(_bolScans&&_bolScans.length)?_bolScans.slice():[];
+  var _consolidatedStart=(G&&G.startTime)?G.startTime:new Date();
+  var _consolidatedCarga=(G&&G.carga)?G.carga:'';
+  var _consolidatedSID=(G&&G.sid)?G.sid:'';
+  var _consolidatedDoor=(G&&G.door)?G.door:'';
+  pushMaster({
+    sid:_consolidatedSID,
+    door:_consolidatedDoor,
+    trailer:trailerLabel,
+    order:_consolidatedSOs,
+    carga:_consolidatedCarga,
+    loader:selLoader,
+    shift:selShift,
+    startTime:_consolidatedStart,
+    endTime:new Date(),
+    loaded:totalLoaded,
+    total:_consolidatedTotal,
+    wrongScans:(G&&G.wrongScans)?G.wrongScans:0,
+    result:totalLoaded>=_consolidatedTotal?'COMPLETE':'PARTIAL',
+    confirmLog:[],
+    multiStop:true,
+    msStopCount:stopCount,
+    msStopBreakdown:msStops.map(function(s,i){
+      var ids=msLoadedByStop[i]?Object.keys(msLoadedByStop[i].loadedIds||{}).length:(i===msStops.length-1?totalLoaded:0);
+      return 'Load '+s.stopNum+': '+ids+'/'+s.qty;
+    }).join(' | '),
+    bolStops:_consolidatedBOLs,
+    pallets:_allPallets,
+    scanLog:(G&&G.allLog)?G.allLog.slice():[]
+  });
+  // Send consolidated record to SharePoint
+  (function(){
+    var _mst=getMaster(),_last=_mst[_mst.length-1];
+    if(!_last)return;
+    var _st=_last.startTime instanceof Date?_last.startTime:new Date(_last.startTime);
+    var _todayStr=_st.toLocaleDateString('en-US');
+    var _timeStr=_st.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:false});
+    var _mAll=getMaster();
+    var _loaderNum=_mAll.filter(function(x){return x.loader===_last.loader&&new Date(x.startTime).toLocaleDateString('en-US')===_todayStr&&!x._stopRecord;}).length;
+    var _payload={
+      date:_todayStr,time:_timeStr,
+      door:_last.door||'',sid:_last.sid||'',trailer:_last.trailer,
+      salesOrder:_last.order,load:_last.carga,
+      loaderLoadNum:_loaderNum,
+      loader:_last.loader,shift:_last.shift,
+      totalPallets:_last.total,scanned:_last.loaded,
+      missing:_last.total-_last.loaded,
+      wrongScans:_last.wrongScans||0,
+      result:_last.result,
+      driverNotes:'Multi-stop: '+(_last.msStopBreakdown||''),
+      driverOverridesCount:0,driverOverrides:[],
+      multiStop:true,
+      bolStops:_last.bolStops||[],
+      bolStopsCount:(_last.bolStops||[]).length,
+      bolStopsSummary:(_last.bolStops||[]).map(function(s){return s.position+': '+s.bol;}).join(' | '),
+      pallets:(_last.pallets||[]).map(function(p){
+        return{palletId:p.id,physicalLabelId:p._physicalLabelId||'',sku:p.sku||'',
+          qty:p.qty||0,status:p.status||'',
+          scannedAt:p.scannedAt?new Date(p.scannedAt).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false}):'',
+          driverOverride:false,driverNote:''};
+      })
+    };
+    fetch(POWER_AUTOMATE_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(_payload)})
+      .then(function(r){if(r.ok||r.status===202){toast('✓ Trailer '+trailerLabel+' saved to SharePoint','tok');}
+        else{toast('SharePoint save failed ('+r.status+') — local record kept','twarn');}})
+      .catch(function(){toast('SharePoint offline — local record kept','twarn');});
+  })();
+  // ── END CONSOLIDATED RECORD ──
   // Save loader & shift before reset
   var _savedLoader=selLoader;var _savedShift=selShift;
   multiStop=false;multiStopLoadNum=1;msStops=[];msLoadedByStop=[];msOrderSOList=[];msOrderTotalCount=0;
-  _pendingDriverCount=null;
+  _pendingDriverCount=null;_bolScans=[];
   var _dInp=document.getElementById('inpDoor');if(_dInp)_dInp.value='';
   var _tInp=document.getElementById('inpTrailer');if(_tInp)_tInp.value='';
   // Reset SO entries wrap
@@ -3282,6 +3368,7 @@ function doConfirm(){
     result:res,
     confirmLog:G.confirmLog||[],
     multiStop:multiStop||false,
+    _stopRecord:multiStop?true:false,
     bolStops:(_bolScans&&_bolScans.length)?_bolScans.slice():[],
     pallets:G.pallets.slice(),scanLog:G.allLog.slice()
   });
@@ -3508,29 +3595,31 @@ function renderMaster(){
 function exportMaster(){
   var m=getMaster();if(!m.length){toast('No records to export','twarn');return;}
   var wb=XLSX.utils.book_new();
-  // Sheet 1 \u2014 Load Summary
-  var h=['#','Date','Time','Door','SID','Trailer','Sales Order','Load','Loader','Shift','Duration (min)','Scanned','Total Pallets','Missing','Wrong Scans','Result','Notes','BOL Stops'];
-  var rows=m.map(function(r){
+  // Sheet 1 \u2014 Load Summary (exclude per-stop records; consolidated trailer record is used)
+  var mSummary=m.filter(function(r){return !r._stopRecord;});
+  var h=['#','Date','Time','Door','SID','Trailer','Sales Order','Load','Loader','Shift','Duration (min)','Scanned','Total Pallets','Missing','Wrong Scans','Result','Notes','BOL Count','BOL Stops'];
+  var rows=mSummary.map(function(r){
     var dt=new Date(r.startTime);
     var dur=Math.round((new Date(r.endTime)-dt)/60000);
     var bolStr=(r.bolStops&&r.bolStops.length)
       ?r.bolStops.map(function(s){return s.position+': '+s.bol;}).join(' | ')
       :'';
+    var bolCount=(r.bolStops&&r.bolStops.length)||0;
     return[r.id,
       dt.toLocaleDateString('en-US'),
       dt.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:false}),
       r.door||'',r.sid||'',r.trailer,r.order,(r.loaderLoadNum||r.carga||''),r.loader,r.shift,
-      dur,r.loaded,r.total,(r.total-r.loaded),r.wrongScans,r.result,r.driverNotes||'',bolStr];
+      dur,r.loaded,r.total,(r.total-r.loaded),r.wrongScans,r.result,r.driverNotes||'',bolCount,bolStr];
   });
   var ws=XLSX.utils.aoa_to_sheet([h].concat(rows));
-  // Column widths
-  ws['!cols']=[{wch:4},{wch:12},{wch:8},{wch:6},{wch:12},{wch:10},{wch:12},{wch:8},{wch:10},{wch:6},{wch:6},{wch:8},{wch:8},{wch:8},{wch:8},{wch:10},{wch:40},{wch:35}];
+  // Column widths (19 cols: added BOL Count before BOL Stops)
+  ws['!cols']=[{wch:4},{wch:12},{wch:8},{wch:6},{wch:12},{wch:10},{wch:14},{wch:8},{wch:10},{wch:6},{wch:6},{wch:8},{wch:8},{wch:8},{wch:8},{wch:10},{wch:40},{wch:9},{wch:35}];
   XLSX.utils.book_append_sheet(wb,ws,'Load Summary');
 
-  // Sheet 2 \u2014 All Pallets (including driver overrides)
+  // Sheet 2 \u2014 All Pallets (use consolidated records only \u2014 skip _stopRecord intermediates)
   var h2=['Load#','Date','Time','Door','Trailer','Sales Order','Load','Loader','Pallet ID','Physical Label ID','SKU','Qty','Status','Scanned At','Driver Override','Driver Note'];
   var r2=[];
-  m.forEach(function(r){
+  mSummary.forEach(function(r){
     var dt=new Date(r.startTime);
     var d=dt.toLocaleDateString('en-US');
     var t=dt.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:false});
@@ -3545,10 +3634,10 @@ function exportMaster(){
   ws2['!cols']=[{wch:5},{wch:12},{wch:8},{wch:6},{wch:10},{wch:10},{wch:8},{wch:10},{wch:16},{wch:16},{wch:12},{wch:5},{wch:9},{wch:10},{wch:8},{wch:30}];
   XLSX.utils.book_append_sheet(wb,ws2,'All Pallets');
 
-  // Sheet 3 \u2014 Missing Pallets
+  // Sheet 3 \u2014 Missing Pallets (consolidated records only)
   var h3=['Load#','Date','Door','Trailer','Sales Order','Load','Loader','Pallet ID','SKU','Qty'];
   var r3=[];
-  m.forEach(function(r){
+  mSummary.forEach(function(r){
     var d=new Date(r.startTime).toLocaleDateString('en-US');
     (r.pallets||[]).filter(function(p){return p.status!=='LOADED'&&!p.driverOverride;}).forEach(function(p){
       r3.push([r.id,d,r.door||'',r.trailer,r.order,(r.loaderLoadNum||r.carga||''),r.loader,p.id,p.sku,p.qty]);
