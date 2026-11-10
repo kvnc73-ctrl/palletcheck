@@ -23,6 +23,8 @@
   --display:'Bebas Neue',sans-serif;
 }
 html,body{height:100%;font-family:var(--sans);background:var(--paper);color:var(--t1);overflow:hidden}
+html{height:-webkit-fill-available;}
+body{min-height:-webkit-fill-available;}
 
 /* ── NAV ── */
 nav{
@@ -66,7 +68,7 @@ nav{
 .nav-logo img{height:34px;object-fit:contain;}
 
 /* ── SHELL ── */
-#app{display:flex;flex-direction:column;height:100vh;}
+#app{display:flex;flex-direction:column;height:100vh;height:100dvh;min-height:-webkit-fill-available;}
 #views{flex:1;position:relative;overflow:hidden;}
 .view{position:absolute;inset:0;display:none;overflow:hidden;}
 .view.show{display:flex;}
@@ -266,8 +268,8 @@ nav{
 /* ── MOBILE / SCANNER layout ── */
 @media(max-width:700px){
   /* vScan fills screen exactly, no page scroll */
-  #views{overflow:hidden;}
-  #vScan{flex-direction:column;display:flex;height:100%;overflow:hidden;}
+  #views{overflow:hidden;height:100%;}
+  #vScan.show{flex-direction:column;display:flex;width:100%;height:100%;overflow:hidden;position:absolute;inset:0;}
 
   /* Sidebar — collapses to a tap-to-expand manifest drawer */
   .sidebar{
@@ -292,8 +294,7 @@ nav{
   /* Scan panel: flex column, scan-main scrolls internally */
   .scan-panel{flex:1;display:flex;flex-direction:column;min-height:0;overflow:hidden;}
   .scan-main{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;min-height:0;}
-  /* Hide simulate row on mobile — not needed in production */
-  .sim-row{display:none !important;}
+  /* sim-row hidden globally via base CSS (display:none by default, only shown >700px) */
   /* Keep action bar always visible at bottom */
   .mob-action-bar{position:sticky;bottom:0;z-index:30;flex-shrink:0;}
 
@@ -320,7 +321,7 @@ nav{
   /* Actions — move from kpi-bar column to bottom action bar */
   .kpi-actions{display:none !important;}
   .mob-action-bar{
-    display:flex !important;
+    /* NO display:flex here — JS controls show/hide via style attribute */
     position:sticky;bottom:0;z-index:20;
     background:var(--navy2);border-top:1px solid rgba(255,255,255,.1);
     padding:8px 10px;gap:7px;flex-shrink:0;
@@ -345,14 +346,16 @@ nav{
   .footer{
     position:fixed !important;
     bottom:0 !important;
+    bottom:env(safe-area-inset-bottom, 0px) !important;
     left:0;right:0;
     z-index:999;
     padding:6px 10px;
+    padding-bottom:max(6px, env(safe-area-inset-bottom, 6px));
     gap:6px;
     min-height:48px;
   }
   /* Push scan-main content up so footer doesn't cover last item */
-  .scan-panel{padding-bottom:52px;}
+  .scan-panel{padding-bottom:calc(52px + env(safe-area-inset-bottom, 0px));}
   .btn-confirm{display:block !important;font-size:11px;padding:10px 12px;white-space:nowrap;}
   .pct-num{font-size:14px;}
 
@@ -362,9 +365,6 @@ nav{
   .result-title{font-size:20px;}
   .result{padding:14px 16px;}
 
-  /* Sim buttons — horizontal scroll, no wrap */
-  .sim-row{padding:8px 12px;overflow-x:auto;flex-wrap:nowrap;}
-  .sim-row::-webkit-scrollbar{display:none;}
   .btn-sim{flex-shrink:0;}
 }
 .sb-head{padding:16px 18px 12px;border-bottom:1px solid rgba(255,255,255,.08);flex-shrink:0;}
@@ -449,7 +449,7 @@ nav{
 .kpi-btn.btn-cancel{background:rgba(239,68,68,.12);color:#fca5a5;border:1px solid rgba(239,68,68,.25);}
 /* Override modals */
 .ov-modal{
-  display:none;position:fixed;inset:0;z-index:900;
+  display:none;position:fixed;inset:0;z-index:1100;
   background:rgba(0,0,0,.65);backdrop-filter:blur(4px);
   align-items:center;justify-content:center;
 }
@@ -716,7 +716,7 @@ tbody td{padding:10px 16px;font-size:12px;color:var(--t1);}
 #modal-overlay{
   display:none;position:fixed;inset:0;
   background:rgba(0,0,0,.6);backdrop-filter:blur(8px);
-  z-index:200;align-items:center;justify-content:center;
+  z-index:1100;align-items:center;justify-content:center;
 }
 #modal-overlay.open{display:flex;}
 .modal{
@@ -856,7 +856,7 @@ tbody td{padding:10px 16px;font-size:12px;color:var(--t1);}
     <div class="sc-row">
       <div class="fg">
         <label class="fl">Loading Door</label>
-        <input class="fi" id="inpDoor" placeholder="D-07" autocomplete="off">
+        <input class="fi" id="inpDoor" placeholder="D-07" autocomplete="off" inputmode="numeric" pattern="[0-9]*">
       </div>
       <div class="fg">
         <label class="fl">Trailer Number</label>
@@ -998,6 +998,11 @@ tbody td{padding:10px 16px;font-size:12px;color:var(--t1);}
   <div id="multiStopLabel" style="display:none;"></div>
 
   <div class="cta-wrap">
+    <!-- Resume button — only shown when a scan session is active -->
+    <button id="btnResumeScan" onclick="goView('scan');initScan();" style="display:none;width:100%;padding:12px;margin-bottom:10px;background:var(--emerald);border:none;border-radius:10px;color:#fff;font-family:var(--display);font-size:15px;letter-spacing:.05em;cursor:pointer;display:none;align-items:center;justify-content:center;gap:8px;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+      RESUME ACTIVE SCAN
+    </button>
     <div class="lock-line">
       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
       Trailer &amp; SO lock once you start
@@ -1279,14 +1284,7 @@ tbody td{padding:10px 16px;font-size:12px;color:var(--t1);}
     </div><!-- /scan-main -->
 
   </div><!-- /scan-panel -->
-  <div class="footer">
-    <span class="pct-num" id="fPct">0%</span>
-    <div class="pbar"><div class="pbar-fill" id="pbarFill"></div></div>
-    <span class="remain-txt" id="fRem"></span>
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.3)" stroke-width="1.5"><rect x="1" y="3" width="15" height="13"/><path d="m16 8 5 0 3 4v4h-8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
-    <button class="btn-confirm" id="btnConfirm" onclick="openModal()" disabled>CONFIRM LOAD</button>
-  </div>
-</div>
+</div><!-- /vScan -->
 
 <!-- ── MASTER DATA VIEW ── -->
 <div class="view" id="vMaster">
@@ -1479,6 +1477,16 @@ tbody td{padding:10px 16px;font-size:12px;color:var(--t1);}
 </div><!-- vAdmin -->
 
 </div><!-- #views -->
+
+<!-- Footer lives outside all views — fixed to bottom, only shown in scan view -->
+<div class="footer" id="scanFooter" style="display:none;">
+  <span class="pct-num" id="fPct">0%</span>
+  <div class="pbar"><div class="pbar-fill" id="pbarFill"></div></div>
+  <span class="remain-txt" id="fRem"></span>
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.3)" stroke-width="1.5"><rect x="1" y="3" width="15" height="13"/><path d="m16 8 5 0 3 4v4h-8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+  <button class="btn-confirm" id="btnConfirm" onclick="openModal()" disabled>CONFIRM LOAD</button>
+</div>
+
 </div><!-- #app -->
 
 <!-- CONFIRM MODAL -->
@@ -1704,9 +1712,15 @@ function goView(v){
   if(v==='master')renderMaster();
   if(v==='activity')renderActivity();
   if(v==='setup')syncFinishBtn();
+  // Hide mob-action-bar and footer when leaving scan view
+  var _mab=document.querySelector('.mob-action-bar');
+  if(_mab&&v!=='scan')_mab.style.display='none';
+  var _sf=document.getElementById('scanFooter');
+  if(_sf&&v!=='scan')_sf.style.display='none';
 }
-// Active load tab click
-document.getElementById('ntLoad').onclick=function(){goView(G?'scan':'setup');};
+// Active load tab click — always goes to setup (New Trailer form)
+// If a scan session is active, user can return to it via the scan view's own nav
+document.getElementById('ntLoad').onclick=function(){goView('setup');};
 
 // Mobile sidebar toggle — tap the sb-head to expand/collapse manifest
 (function(){
@@ -1770,6 +1784,14 @@ function addPick(n){addLoader(n);pickLoader(n);}
 })();
 // Restore last loader on page load + honor refresh-to-load flag
 (function(){
+  // Always start at setup (New Trailer) on page load — reset any stale scan view
+  try{
+    goView('setup');
+    var _mab=document.querySelector('.mob-action-bar');
+    if(_mab)_mab.style.display='none';
+    var _sf=document.getElementById('scanFooter');
+    if(_sf)_sf.style.display='none';
+  }catch(e){}
   try{
     var last=localStorage.getItem('pc_last_loader');
     if(last){setTimeout(function(){pickLoader(last);},100);}
@@ -2640,6 +2662,11 @@ function mkPallets(so){
 
 // ── SCAN INIT ──
 function initScan(){
+  // Show mob-action-bar and footer only in scan view
+  var _mab=document.querySelector('.mob-action-bar');
+  if(_mab)_mab.style.display='flex';
+  var _sf=document.getElementById('scanFooter');
+  if(_sf)_sf.style.display='flex';
   renderManifest();renderQueue();updateKPIs();updateFooter();
   document.getElementById('scan-inp').disabled=false;
   document.getElementById('scan-inp').value='';
@@ -3064,11 +3091,12 @@ function finishTrailer(){
   goView('setup');
 }
 
-// Show / hide FINISH TRAILER button based on multi-stop state
+// Show / hide FINISH TRAILER button and RESUME SCAN button based on state
 function syncFinishBtn(){
   var fb=document.getElementById('btnFinishTrailer');
-  if(!fb)return;
-  fb.style.display=(multiStop&&multiStopLoadNum>1)?'flex':'none';
+  if(fb)fb.style.display=(multiStop&&multiStopLoadNum>1)?'flex':'none';
+  var rb=document.getElementById('btnResumeScan');
+  if(rb)rb.style.display=G?'flex':'none';
 }
 // ── NEXT SO ──
 function promptNext(){
