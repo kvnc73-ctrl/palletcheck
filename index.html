@@ -34,8 +34,7 @@ nav{
 .nav-brand{display:flex;align-items:center;gap:10px;padding:0 20px;border-right:1px solid rgba(255,255,255,.1);}
 @media(max-width:600px){
   .nav-brand{display:none;}
-  #ntActivity,#ntMaster,#ntDocs,#ntAdmin{display:flex;}
-  .nav-tab#ntLoad{font-size:11px;padding:0 10px;}
+  #ntLoad,#ntActivity,#ntMaster,#ntDocs,#ntAdmin{display:flex !important;}
   .nav-tab{font-size:11px;padding:0 10px;gap:4px;}
   .nav-tab svg{display:none;}
   .nav-tabs{overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;}
@@ -266,10 +265,9 @@ nav{
 
 /* ── MOBILE / SCANNER layout ── */
 @media(max-width:700px){
-  /* Allow the scan view to be taller than screen so user can scroll to footer */
-  #views{overflow-y:auto;overflow-x:hidden;}
-  #vScan{flex-direction:column;display:flex;height:auto;min-height:calc(100% + 80px);overflow:visible;}
-  /* On mobile vScan is taller than viewport — user scrolls down to reach footer */
+  /* vScan fills screen exactly, no page scroll */
+  #views{overflow:hidden;}
+  #vScan{flex-direction:column;display:flex;height:100%;overflow:hidden;}
 
   /* Sidebar — collapses to a tap-to-expand manifest drawer */
   .sidebar{
@@ -291,9 +289,11 @@ nav{
   .sb-title{font-size:18px;}
   .sb-progress{font-size:12px;}
 
-  /* Scan panel — no internal scroll, page itself scrolls */
-  .scan-panel{flex:1;display:flex;flex-direction:column;overflow:visible;}
-  .scan-main{overflow:visible;}
+  /* Scan panel: flex column, scan-main scrolls internally */
+  .scan-panel{flex:1;display:flex;flex-direction:column;min-height:0;overflow:hidden;}
+  .scan-main{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;min-height:0;}
+  /* Hide simulate row on mobile — not needed in production */
+  .sim-row{display:none !important;}
   /* Keep action bar always visible at bottom */
   .mob-action-bar{position:sticky;bottom:0;z-index:30;flex-shrink:0;}
 
@@ -341,13 +341,18 @@ nav{
   .mob-btn.mb-back{background:rgba(255,255,255,.08);color:rgba(255,255,255,.55);border:1px solid rgba(255,255,255,.12);}
   .mob-btn.mb-cancel{background:rgba(239,68,68,.15);color:#fca5a5;border:1px solid rgba(239,68,68,.3);}
 
-  /* Footer — always visible at bottom, sibling of scan-panel not child */
+  /* Footer — fixed at very bottom, always on top of Android nav bar */
   .footer{
-    flex-shrink:0 !important;
-    display:flex !important;
-    padding:8px 14px;
-    gap:8px;
+    position:fixed !important;
+    bottom:0 !important;
+    left:0;right:0;
+    z-index:999;
+    padding:6px 10px;
+    gap:6px;
+    min-height:48px;
   }
+  /* Push scan-main content up so footer doesn't cover last item */
+  .scan-panel{padding-bottom:52px;}
   .btn-confirm{display:block !important;font-size:11px;padding:10px 12px;white-space:nowrap;}
   .pct-num{font-size:14px;}
 
@@ -1489,7 +1494,7 @@ tbody td{padding:10px 16px;font-size:12px;color:var(--t1);}
     </div>
     <div class="modal-btns">
       <button class="btn-back" onclick="closeModal()">&#x2190; Go Back</button>
-      <button class="btn-save" id="btnModalSave" onclick="doConfirm()">CONFIRM &amp; SAVE TO MASTER</button>
+      <button class="btn-save" id="btnModalSave" onclick="doConfirmFinal()">DONE &amp; SAVE TO MASTER</button>
     </div>
   </div>
 </div>
