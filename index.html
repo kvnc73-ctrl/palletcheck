@@ -1650,7 +1650,7 @@ function pushMaster(rec){
   // Count how many loads this loader has completed today (including this one)
   var todayStr=new Date().toLocaleDateString('en-US');
   var loaderToday=m.filter(function(x){
-    return x.loader===rec.loader&&new Date(x.startTime).toLocaleDateString('en-US')===todayStr;
+    return x.loader===rec.loader&&new Date(x.startTime).toLocaleDateString('en-US')===todayStr&&!x._stopRecord;
   }).length+1;
   m.push({
     id:m.length+1,savedAt:new Date().toISOString(),
@@ -1663,6 +1663,7 @@ function pushMaster(rec){
     loaded:rec.loaded,total:rec.total,wrongScans:rec.wrongScans,result:rec.result,
     driverNotes:driverNotes.join(' | ')||'',
     multiStop:rec.multiStop||false,
+    _stopRecord:rec._stopRecord?true:false,
     bolStops:rec.bolStops||[],
     pallets:rec.pallets.map(function(p){
       return{id:p.id,sku:p.sku,qty:p.qty,status:p.status,scannedAt:s(p.scannedAt),
@@ -1677,7 +1678,7 @@ function pushMaster(rec){
 
 // Session + activity
 var G=null, selLoader='', selShift='', selCarga='', actLog=[];
-var multiStop=false, multiStopLoadNum=1, multiStopTrailer='', multiStopDoor='', multiStopLoader='', multiStopShift='';
+var multiStop=false, multiStopLoadNum=1, multiStopTrailer='', multiStopDoor='', multiStopSID='', multiStopCarga='', multiStopLoader='', multiStopShift='';
 var POWER_AUTOMATE_URL='https://defaultf2f65ec44d9049b5b2bb2dae6f6348.35.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/22/workflows/bd5e273ded784536a5e2a3c248bbef20/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=HR7V7ZFY2TD_1it5QZJMNEvw7H_FB6DqttJmGHub820';
 
 function toggleMultiStop(){
@@ -2186,9 +2187,10 @@ function msFinishTrailer(stopCount,totalLoaded){
   var _consolidatedSOs=(msOrderSOList&&msOrderSOList.length)?msOrderSOList.join(', '):(G&&G.curSO?G.curSO:'');
   var _consolidatedBOLs=(_bolScans&&_bolScans.length)?_bolScans.slice():[];
   var _consolidatedStart=(G&&G.startTime)?G.startTime:new Date();
-  var _consolidatedCarga=(G&&G.carga)?G.carga:'';
-  var _consolidatedSID=(G&&G.sid)?G.sid:'';
-  var _consolidatedDoor=(G&&G.door)?G.door:'';
+  var _consolidatedCarga=multiStopCarga||(G&&G.carga?G.carga:'');
+  // Use saved globals — G may be null at this point (cleared before msFinishTrailer call)
+  var _consolidatedSID=multiStopSID||(G&&G.sid?G.sid:'');
+  var _consolidatedDoor=multiStopDoor||(G&&G.door?G.door:'');
   pushMaster({
     sid:_consolidatedSID,
     door:_consolidatedDoor,
@@ -2254,7 +2256,7 @@ function msFinishTrailer(stopCount,totalLoaded){
   // ── END CONSOLIDATED RECORD ──
   // Save loader & shift before reset
   var _savedLoader=selLoader;var _savedShift=selShift;
-  multiStop=false;multiStopLoadNum=1;msStops=[];msLoadedByStop=[];msOrderSOList=[];msOrderTotalCount=0;
+  multiStop=false;multiStopLoadNum=1;multiStopTrailer='';multiStopDoor='';multiStopSID='';multiStopCarga='';msStops=[];msLoadedByStop=[];msOrderSOList=[];msOrderTotalCount=0;
   _pendingDriverCount=null;_bolScans=[];
   var _dInp=document.getElementById('inpDoor');if(_dInp)_dInp.value='';
   var _tInp=document.getElementById('inpTrailer');if(_tInp)_tInp.value='';
@@ -2683,8 +2685,10 @@ function startLoad(){
 
   // Save multi-stop context
   if(multiStop){
-    multiStopTrailer=trailer;multiStopDoor=door;
+    var _msSid=document.getElementById('inpBOL')?document.getElementById('inpBOL').value.trim():'';
+    multiStopTrailer=trailer;multiStopDoor=door;multiStopSID=_msSid;
     multiStopLoader=selLoader;multiStopShift=selShift;
+    if(multiStopLoadNum===1)multiStopCarga=loadLabel||'';
     // Save full SO list and total unique count on first stop only
     if(multiStopLoadNum===1||!msOrderSOList||msOrderSOList.length===0){
       msOrderSOList=soList.slice();
@@ -3162,7 +3166,7 @@ function finishTrailer(){
   // Reset all multi-stop state
   multiStop=false;
   multiStopLoadNum=1;
-  multiStopTrailer='';multiStopDoor='';multiStopLoader='';multiStopShift='';
+  multiStopTrailer='';multiStopDoor='';multiStopSID='';multiStopCarga='';multiStopLoader='';multiStopShift='';
   // Hide FINISH TRAILER button
   var fb=document.getElementById('btnFinishTrailer');if(fb)fb.style.display='none';
   // Reset multi-stop toggle
@@ -3325,7 +3329,7 @@ function doConfirmFinal(){
   // Save loader & shift
   var _svL=selLoader;var _svS=selShift;
   // Full reset
-  G=null;multiStop=false;multiStopLoadNum=1;msStops=[];msLoadedByStop=[];msOrderSOList=[];msOrderTotalCount=0;
+  G=null;multiStop=false;multiStopLoadNum=1;multiStopTrailer='';multiStopDoor='';multiStopSID='';multiStopCarga='';msStops=[];msLoadedByStop=[];msOrderSOList=[];msOrderTotalCount=0;
   _pendingDriverCount=null;_bolScans=[];
   var _dI=document.getElementById('inpDoor');if(_dI)_dI.value='';
   var _tI=document.getElementById('inpTrailer');if(_tI)_tI.value='';
@@ -3376,7 +3380,8 @@ function doConfirm(){
     pallets:G.pallets.slice(),scanLog:G.allLog.slice()
   });
   // \u2500\u2500 Auto-save to SharePoint via Power Automate \u2500\u2500
-  (function(snap){
+  // Skip webhook for intermediate multi-stop records \u2014 msFinishTrailer() sends the consolidated one
+  if(!multiStop)(function(snap){
     // Build driver overrides list
     var driverOverrides=snap.pallets.filter(function(p){return p._driverOverride;}).map(function(p){
       return{palletId:p.id,physicalLabelId:p._physicalLabelId||'',label:p._driverLabel||'',scannedAt:p.scannedAt?p.scannedAt.toISOString():null};
@@ -3446,6 +3451,7 @@ function doConfirm(){
       loader:G.loader,shift:G.shift,total:totalPals,loaded:ld,result:res,
       wrongScans:G.wrongScans,confirmLog:G.confirmLog||[],pallets:G.pallets.slice(),
       bolStops:(_bolScans&&_bolScans.length)?_bolScans.slice():[]});
+  // end if(!multiStop)
   toast('\u2713 Load '+mid+' saved \u2014 '+getMaster().length+' total records','tok');
 
   if(multiStop){
@@ -3539,7 +3545,7 @@ function msNextStopAnswer(hasMore){
     var totalLoaded=msLoadedByStop.reduce(function(acc,s){return acc+Object.keys(s.loadedIds).length;},0);
     var stopCount=multiStopLoadNum;
     var trailerLabel=multiStopTrailer;
-    multiStop=false;multiStopLoadNum=1;msStops=[];msLoadedByStop=[];
+    multiStop=false;multiStopLoadNum=1;multiStopTrailer='';multiStopDoor='';multiStopSID='';multiStopCarga='';msStops=[];msLoadedByStop=[];
     _pendingDriverCount=null;
     ['inpDoor','inpTrailer','inpSO'].forEach(function(id){document.getElementById(id).value='';});
     document.getElementById('soHint').style.display='none';
@@ -4274,8 +4280,8 @@ function ovCancel(){
   // Cancel wipes the session completely
   if(!confirm('¿Cancelar esta carga? Todo el progreso se perderá.'))return;
   G=null;
-  multiStop=false;multiStopLoadNum=1;msStops=[];msLoadedByStop=[];
-  _pendingDriverCount=null;
+  multiStop=false;multiStopLoadNum=1;multiStopTrailer='';multiStopDoor='';multiStopSID='';multiStopCarga='';msStops=[];msLoadedByStop=[];msOrderSOList=[];msOrderTotalCount=0;
+  _pendingDriverCount=null;_bolScans=[];
   if(typeof goView==='function'){goView('setup');}
   toast('Carga cancelada','twarn');
 }
