@@ -3218,6 +3218,7 @@ function doConfirmFinal(){
   _pendingDriverCount=null;_bolScans=[];
   var _dI=document.getElementById('inpDoor');if(_dI)_dI.value='';
   var _tI=document.getElementById('inpTrailer');if(_tI)_tI.value='';
+  var _bI=document.getElementById('inpBOL');if(_bI)_bI.value='';
   var _soW=document.getElementById('soEntriesWrap');
   if(_soW){_soW.innerHTML='';soEntries=[];addSOEntry();}
   document.getElementById('soHint').style.display='none';
@@ -3232,7 +3233,12 @@ function doConfirmFinal(){
   document.querySelectorAll('.shift-opt').forEach(function(b){
     var sn=b.querySelector('.shift-name');b.classList.toggle('on',sn&&sn.textContent.trim()===_svS);
   });
-  goView('setup');yardPulse();
+  // Force close modal overlay in case it's still visible
+  var _mo=document.getElementById('modal-overlay');
+  if(_mo)_mo.classList.remove('open');
+  goView('setup');
+  syncFinishBtn();
+  yardPulse();
 }
 
 // ── CONFIRM → MASTER ──
@@ -4143,6 +4149,8 @@ function _logConfirm(type,scanned,expected){
 
 // --- Back / Cancel ---
 function ovBack(){
+  // Clear SID# field when going back to setup
+  var _bI=document.getElementById('inpBOL');if(_bI)_bI.value='';
   // Go back to setup — session (G) is preserved so loader can resume
   if(typeof goView==='function'){goView('setup');}
   // G intentionally NOT cleared — loader can tap Active Load to resume
